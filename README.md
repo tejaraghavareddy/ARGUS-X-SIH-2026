@@ -1,272 +1,399 @@
-## Overview
-
-This project uses the following tech stack:
-- Vite
-- Typescript
-- React Router v7 (all imports from `react-router` instead of `react-router-dom`)
-- React 19 (for frontend components)
-- Tailwind v4 (for styling)
-- Shadcn UI (for UI components library)
-- Lucide Icons (for icons)
-- Convex (for backend & database)
-- Convex Auth (for authentication)
-- Framer Motion (for animations)
-- Three js (for 3d models)
-
-All relevant files live in the 'src' directory.
-
-Use bun for the package manager.
-
-## Setup
-
-This project is set up already and running on a cloud environment, as well as a convex development in the sandbox.
-
-## Environment Variables
-
-The project is set up with project specific CONVEX_DEPLOYMENT and VITE_CONVEX_URL environment variables on the client side.
-
-The convex server has a separate set of environment variables that are accessible by the convex backend.
-
-Currently, these variables include auth-specific keys: JWKS, JWT_PRIVATE_KEY, and SITE_URL.
-
-
-# Using Authentication (Important!)
-
-You must follow these conventions when using authentication.
-
-## Auth is already set up.
-
-All convex authentication functions are already set up. The auth currently uses email OTP and anonymous users, but can support more.
-
-The email OTP configuration is defined in `src/convex/auth/emailOtp.ts`. DO NOT MODIFY THIS FILE.
-
-Also, DO NOT MODIFY THESE AUTH FILES: `src/convex/auth.config.ts` and `src/convex/auth.ts`.
-
-## Using Convex Auth on the backend
-
-On the `src/convex/users.ts` file, you can use the `getCurrentUser` function to get the current user's data.
-
-## Using Convex Auth on the frontend
-
-The `/auth` page is already set up to use auth. Navigate to `/auth` for all log in / sign up sequences.
-
-You MUST use this hook to get user data. Never do this yourself without the hook:
-```typescript
-import { useAuth } from "@/hooks/use-auth";
-
-const { isLoading, isAuthenticated, user, signIn, signOut } = useAuth();
-```
-
-## Protected Routes
-
-The starter `/dashboard` route is protected with `RequireAuth`, which sends
-signed-out users to `/auth?returnTo=<current route>`. Extend that page for the
-product's authenticated experience, and reuse `RequireAuth` when adding another
-protected route.
-
-## Auth Page
-
-The auth page is defined in `src/pages/Auth.tsx`. Send sign-in and sign-up actions
-to `/auth`.
-
-## Authorization
-
-You can perform authorization checks on the frontend and backend.
-
-On the frontend, you can use the `useAuth` hook to get the current user's data and authentication state.
-
-You should also be protecting queries, mutations, and actions at the base level, checking for authorization securely.
-
-## Adding a redirect after auth
-
-The `/auth` route in `src/main.tsx` redirects to `/dashboard` by default. If the
-product's main authenticated route is different, update `redirectAfterAuth` to
-that route. A validated same-origin `returnTo` query parameter takes priority so
-users can resume the protected page they originally requested. Never leave an
-authenticated product redirecting back to the public landing page.
-
-## Complete authenticated products
-
-When the requested product implies accounts, a workspace, a dashboard, or other
-signed-in functionality, the task is not complete with only a landing page and
-auth form. Build the main authenticated experience, protect its route, and verify
-that signing in reaches it.
-
-# Frontend Conventions
-
-You will be using the Vite frontend with React 19, Tailwind v4, and Shadcn UI.
-
-Generally, pages should be in the `src/pages` folder, and components should be in the `src/components` folder.
-
-Shadcn primitives are located in the `src/components/ui` folder and should be used by default.
-
-## Page routing
-
-Your page component should go under the `src/pages` folder.
-
-When adding a page, update the react router configuration in `src/main.tsx` to include the new route you just added.
-
-## Shad CN conventions
-
-Follow these conventions when using Shad CN components, which you should use by default.
-- Remember to use "cursor-pointer" to make the element clickable
-- For title text, use the "tracking-tight font-bold" class to make the text more readable
-- Always make apps MOBILE RESPONSIVE. This is important
-- AVOID NESTED CARDS. Try and not to nest cards, borders, components, etc. Nested cards add clutter and make the app look messy.
-- AVOID SHADOWS. Avoid adding any shadows to components. stick with a thin border without the shadow.
-- Avoid skeletons; instead, use the loader2 component to show a spinning loading state when loading data.
-
-
-## Landing Pages
-
-You must always create good-looking designer-level styles to your application. 
-- Make it well animated and fit a certain "theme", ie neo brutalist, retro, neumorphism, glass morphism, etc
-
-Use known images and emojis from online.
-
-If the user is logged in already, show the get started button to say "Dashboard" or "Profile" instead to take them there.
-
-## Responsiveness and formatting
-
-Make sure pages are wrapped in a container to prevent the width stretching out on wide screens. Always make sure they are centered aligned and not off-center.
-
-Always make sure that your designs are mobile responsive. Verify the formatting to ensure it has correct max and min widths as well as mobile responsiveness.
-
-- Always create sidebars for protected dashboard pages and navigate between pages
-- Always create navbars for landing pages
-- On these bars, the created logo should be clickable and redirect to the index page
-
-## Animating with Framer Motion
-
-You must add animations to components using Framer Motion. It is already installed and configured in the project.
-
-To use it, import the `motion` component from `framer-motion` and use it to wrap the component you want to animate.
-
-
-### Other Items to animate
-- Fade in and Fade Out
-- Slide in and Slide Out animations
-- Rendering animations
-- Button clicks and UI elements
-
-Animate for all components, including on landing page and app pages.
-
-## Three JS Graphics
-
-Your app comes with three js by default. You can use it to create 3D graphics for landing pages, games, etc.
-
-
-## Colors
-
-You can override colors in: `src/index.css`
-
-This uses the oklch color format for tailwind v4.
-
-Always use these color variable names.
-
-Make sure all ui components are set up to be mobile responsive and compatible with both light and dark mode.
-
-Set theme using `dark` or `light` variables at the parent className.
-
-## Styling and Theming
-
-When changing the theme, always change the underlying theme of the shad cn components app-wide under `src/components/ui` and the colors in the index.css file.
-
-Avoid hardcoding in colors unless necessary for a use case, and properly implement themes through the underlying shad cn ui components.
-
-When styling, ensure buttons and clickable items have pointer-click on them (don't by default).
-
-Always follow a set theme style and ensure it is tuned to the user's liking.
-
-## Toasts
-
-You should always use toasts to display results to the user, such as confirmations, results, errors, etc.
-
-Use the shad cn Sonner component as the toaster. For example:
+# Sahakar Seva (सहकार सेवा)
+
+**A cooperative-owned gig-work federation marketplace for India.**
+
+Sahakar Seva is a full-stack platform that lets district cooperative societies
+recruit, verify, dispatch and pay independent tradespeople — electricians,
+plumbers, carpenters, masons, painters and appliance technicians — while
+households book verified workers with transparent pricing and zero commission.
+
+Built for **SIH 2026 problem statement 26089** (Ministry of Cooperation).
+
+---
+
+## Table of contents
+
+- [The problem](#the-problem)
+- [What makes it cooperative](#what-makes-it-cooperative)
+- [Feature tour](#feature-tour)
+- [Tech stack](#tech-stack)
+- [Architecture](#architecture)
+- [Project layout](#project-layout)
+- [Data model](#data-model)
+- [The 90/7/3 split](#the-9073-split)
+- [Environment variables](#environment-variables)
+- [Local development](#local-development)
+- [Testing](#testing)
+- [Security posture](#security-posture)
+- [Accessibility & localisation](#accessibility--localisation)
+- [Known limitations](#known-limitations)
+- [License](#license)
+
+---
+
+## The problem
+
+Gig platforms route Indian service work through a broker who keeps a cut of
+every job, treats the worker as interchangeable inventory, and leaves the
+household with no idea whether the person at the door is verified. The worker
+absorbs the platform's margin, the platform's churn and the platform's
+disputes. A cooperative society — an existing, legally constituted district
+body with its own membership and charter — already has the trust, the
+membership and the mandate. What it lacks is the software.
+
+Sahakar Seva is that software. The cooperative owns the marketplace; the
+platform is a tool the society uses, not a party to the transaction.
+
+## What makes it cooperative
+
+This is not a marketplace with a "cooperative" label. Three commitments are
+enforced in the data model and the server, not in the copy:
+
+1. **The split is fixed in code.** `WORKER_SHARE_RATE = 0.9`,
+   `WELFARE_RATE = 0.07`, `OPS_RATE = 0.03` in `src/convex/bookings.ts`. There
+   is no operator UI that changes them, and no admin override.
+2. **The welfare fund is a real ledger.** 7% of every settled booking accrues
+   to a welfare balance; a super admin allocates it to registered schemes. It
+   is money that is accounted for, not money that is mentioned.
+3. **Federation data is genuinely scoped.** A federation admin governs exactly
+   one society (`users.societyId`). The scoping is enforced in the query and
+   mutation layer, with isolation tests that fail if it is removed.
+
+## Feature tour
+
+### For households (customers)
+- Browse six trades and a catalogue of services, filtered by district.
+- **Group bookings** — several nearby households agree on one visit and split
+  the cost. The worker does one job instead of three, and is still paid the
+  full price.
+- Book, then pay either by **direct UPI to the worker's own VPA** (zero
+  commission, the default) or through **Razorpay Checkout** for households who
+  need a gateway receipt.
+- **Live GPS radar** tracking the worker en route, with ETA.
+- **Safety Mode** — show only fully verified workers, and keep the exact
+  address hidden until the worker sets off.
+- In-booking chat, one review per completed booking, and double-blind
+  dispute arbitration.
+
+### For workers (artisans)
+- Sign in by **mobile OTP** (SMS) or email, from a dedicated worker portal.
+- Four-gate onboarding: trade profile → KYC → voice-skill quiz → operational
+  setup. Passing awards a digital cooperative trade credential (`SSC-YYYY-XXXX`).
+- Go online, declare coarse weekly availability, and appear on the district
+  radar.
+- Accept, advance and settle jobs; publish your own service listings (inside a
+  standard trade or a category you name yourself) for board approval.
+- Welfare and dividend balances, a digital ID card, and a voice-request
+  interface for low-literacy users.
+
+### For federation admins
+- Verify KYC, review work samples, approve or reject worker listings.
+- Approve and register district societies; govern one federation.
+- Review disputes, cancel bookings, manage members, and read an earnings
+  ledger scoped to their own society.
+- Every privileged action writes to an append-only `adminAuditLog`.
+
+### For platform super admins
+- See the whole network: federations, workers, bookings, revenue.
+- Create federations, suspend or activate them, and appoint or remove
+  federation admins.
+- Allocate welfare reserves to schemes.
+
+### Intelligence
+- **Demand forecasting** combining real weather (Open-Meteo, no API key
+  required), real festival dates, season and local repair history, through
+  Google Gemini.
+- **Fair-rate stabilisation** recommendations for branch managers.
+- Both degrade to a heuristic rather than failing when the model is
+  unavailable — a forecast feature that cannot run is a feature that does not
+  exist.
+
+## Tech stack
+
+| Layer | Choice |
+| --- | --- |
+| Language | TypeScript 5.9 (strict) |
+| UI | React 19, React Router 7 |
+| Build | Vite 7, Bun |
+| Styling | Tailwind CSS v4, shadcn/ui, Radix primitives |
+| Animation | Framer Motion |
+| Maps | Leaflet / react-leaflet |
+| Charts | Recharts |
+| Backend & database | Convex (reactive queries, mutations, actions) |
+| Auth | Convex Auth — email OTP, SMS OTP, anonymous, two demo providers |
+| Payments | Razorpay Checkout + webhook, direct UPI |
+| AI | Google Gemini (`@google/genai`) |
+| Weather | Open-Meteo (keyless) |
+| SMS | Vonage Messages API |
+| Tests | Vitest, `convex-test`, Testing Library, jsdom |
+
+## Architecture
+
+**Convex is the single source of truth.** There is no separate API server.
+Every screen reads from a reactive query and writes through a mutation, so a
+payment webhook, an admin action and a GPS ping all converge on the same data
+without a synchronisation step.
+
+Runtimes are used deliberately, because Convex has two:
+
+- **V8 runtime** (default) — queries, mutations, and anything calling
+  `crypto.subtle`.
+- **Node runtime** (`"use node"`) — actions that need `axios` or a Node API:
+  Razorpay, Gemini, Open-Meteo, and the SMS sender.
+
+One consequence worth knowing: **`httpAction` runs in V8 and cannot import from
+a `"use node"` module.** That is why the Razorpay webhook receiver lives in its
+own file (`paymentsWebhook.ts`) rather than inside `payments.ts`.
+
+### Trust boundaries
+
+- **Money is server-side only.** The key secret is read exclusively in the node
+  runtime; the browser callback is trusted only after the HMAC of
+  `${order_id}|${payment_id}` verifies. A typed UTR is recorded as
+  `upi_manual`, a verified gateway payment as `gateway` — the ledger treats
+  those differently, and `NEXT_STATUS` does not let a worker skip payment.
+- **Settlement is idempotent.** `internal.bookings.markGatewayPaid` means a
+  replayed webhook and the browser callback racing each other cannot pay a
+  worker twice.
+- **Federation scoping is enforced in the data layer**, not in the UI, with
+  dedicated isolation tests.
+- **Every phone and email identifier is hashed** before it becomes a
+  rate-limit key, so the limiter is never a second, less-protected copy of the
+  member list.
+
+## Project layout
 
 ```
-import { toast } from "sonner"
-
-import { Button } from "@/components/ui/button"
-export function SonnerDemo() {
-  return (
-    <Button
-      variant="outline"
-      onClick={() =>
-        toast("Event has been created", {
-          description: "Sunday, December 03, 2023 at 9:00 AM",
-          action: {
-            label: "Undo",
-            onClick: () => console.log("Undo"),
-          },
-        })
-      }
-    >
-      Show Toast
-    </Button>
-  )
-}
+src/
+  convex/                 backend: schema, queries, mutations, actions
+    auth/                 Convex Auth providers (email OTP, phone OTP, demo)
+    _generated/           codegen output — never hand-edited
+  components/             shared UI, route guards, maps
+    map/                  Leaflet radar, GIS map, location picker
+    ui/                   shadcn/ui primitives
+  lib/                    pure logic: geo, trades, slots, i18n, voice intents
+  pages/                  one file per route
+  test/                   test harness + 29 test files
 ```
 
-Remember to import { toast } from "sonner". Usage: `toast("Event has been created.")`
+Tests live in `src/test/` and colocate as `*.test.ts` next to pure library
+modules (`src/lib/geo.test.ts`).
 
-## Dialogs
+### Key modules
 
-Always ensure your larger dialogs have a scroll in its content to ensure that its content fits the screen size. Make sure that the content is not cut off from the screen.
+| File | Responsibility |
+| --- | --- |
+| `src/lib/geo.ts` | Haversine, bearing, ETA, accuracy classification, fix plausibility, reverse geocoding with a bounded cache |
+| `src/lib/useLocation.ts` | GPS acquisition, staleness, manual-pin handling, quality grading |
+| `src/lib/portal.ts` | Maps a path to the sign-in screen that owns it |
+| `src/lib/trades.ts` | The six trades and the service catalogue |
+| `src/lib/i18n.tsx` | Five-language dictionary + provider |
+| `src/convex/identity.ts` | Role checks, federation scoping |
+| `src/convex/rateLimit.ts` | Fixed-window per-subject limiter |
+| `src/convex/payments.ts` | Razorpay order creation and checkout verification (node) |
 
-Ideally, instead of using a new page, use a Dialog instead. 
+## Data model
 
-# Using the Convex backend
+14 application tables on top of the Convex Auth tables:
 
-You will be implementing the convex backend. Follow your knowledge of convex and the documentation to implement the backend.
+| Table | Purpose |
+| --- | --- |
+| `users` | Identity, role, `societyId` scope, safety preference, phone + email |
+| `artisans` | Worker profile, KYC, credential, presence, availability, welfare balance |
+| `bookings` | The dispatch lifecycle, payment and settlement facts |
+| `bookingGroups` | Cost-shared multi-household visits |
+| `reviews` | One per completed booking, denormalised onto the worker |
+| `societies` | District cooperative registration and charter |
+| `forecasts` | Gemini demand and price-stabilisation snapshots |
+| `messages` | In-booking chat |
+| `workSamples` | Worker evidence photos, purged after the board rules |
+| `customServices` | Worker-published listings awaiting board approval |
+| `disputes` | Double-blind arbitration |
+| `notifications` | Admin-to-worker notices |
+| `adminAuditLog` | Append-only record of every privileged action |
+| `rateLimits` | Per-scope, per-subject fixed windows |
 
-## The Convex Schema
+> **A note on `users`.** The project redefines this table to add cooperative
+> fields. Because the override *replaces* the table contributed by
+> `...authTables`, any Convex Auth column omitted here is silently dropped —
+> which is exactly how `phone` and the `by_phone` index went missing once.
+> If you extend it, keep the auth columns.
 
-You must correctly follow the convex schema implementation.
+## The 90/7/3 split
 
-The schema is defined in `src/convex/schema.ts`.
+Applied once per settled booking, on the **full** job price — a group booking
+with three households still pays the worker the whole amount, with the
+cooperative share taken once per *visit*, not once per participant. Getting
+this wrong is the most likely way to lose a worker, so it has dedicated tests
+(`groupWelfare.test.ts`).
 
-Do not include the `_id` and `_creationTime` fields in your queries (it is included by default for each table).
-Do not index `_creationTime` as it is indexed for you. Never have duplicate indexes.
+| Recipient | Share |
+| --- | --- |
+| Worker | 90% |
+| Welfare fund | 7% |
+| Operational cost | 3% |
 
+## Environment variables
 
-## Convex Actions: Using CRUD operations
+Set these in the project's **Keys / API keys** tab. They are never committed.
 
-When running anything that involves external connections, you must use a convex action with "use node" at the top of the file.
+### Required for sign-in
 
-You cannot have queries or mutations in the same file as a "use node" action file. Thus, you must use pre-built queries and mutations in other files.
+| Variable | Used by | If missing |
+| --- | --- | --- |
+| `EMAIL_OTP_API_KEY` | `auth/emailOtp.ts` | Email sign-in fails |
+| `VONAGE_API_KEY` | `auth/phoneOtp.ts` | SMS sign-in fails |
+| `VONAGE_API_SECRET` | `auth/phoneOtp.ts` | SMS sign-in fails |
+| `VONAGE_SMS_SENDER` | `auth/phoneOtp.ts` | Falls back to `SahakarSeva`; **must be a sender id registered with Vonage** |
 
-You can also use the pre-installed internal crud functions for the database:
+Sign-in methods degrade honestly rather than erroring opaquely: the worker
+screen queries `authConfig.delivery` and disables a method that cannot be
+delivered, with a plain-language notice.
 
-```ts
-// in convex/users.ts
-import { crud } from "convex-helpers/server/crud";
-import schema from "./schema.ts";
+### Required for payments
 
-export const { create, read, update, destroy } = crud(schema, "users");
+| Variable | Used by |
+| --- | --- |
+| `RAZORPAY_KEY_ID` | `payments.ts` (node) |
+| `RAZORPAY_KEY_SECRET` | `payments.ts` (node) |
+| `RAZORPAY_WEBHOOK_SECRET` | `paymentsWebhook.ts` (V8) |
 
-// in some file, in an action:
-const user = await ctx.runQuery(internal.users.read, { id: userId });
+Until these are set, the UI falls back to the manual UPI QR + UTR flow, which
+is the cooperative's default rail anyway.
 
-await ctx.runMutation(internal.users.update, {
-  id: userId,
-  patch: {
-    status: "inactive",
-  },
-});
+### Platform-provided
+
+`JWKS`, `JWT_PRIVATE_KEY`, `SITE_URL`, `CONVEX_SITE_URL`, `VLY_APP_NAME`,
+`VLY_CONVEX_AUTH_ISSUER`, `VLY_INTEGRATION_*`, `VITE_CONVEX_URL`.
+
+### Not required
+
+- **Gemini** — the forecast falls back to a documented heuristic.
+- **Weather** — Open-Meteo is keyless by design. A forecast feature behind a
+  credential nobody can obtain in the time available is a feature that does
+  not run.
+
+## Local development
+
+```bash
+bun install
+bunx convex dev --once   # push functions + regenerate types
+bun run dev
 ```
 
+> Always pass `--once`. Bare `convex dev` is interactive and will hang in a
+> non-interactive terminal, and will leave codegen incomplete.
 
-## Common Convex Mistakes To Avoid
+### Scripts
 
-When using convex, make sure:
-- Document IDs are referenced as `_id` field, not `id`.
-- Document ID types are referenced as `Id<"TableName">`, not `string`.
-- Document object types are referenced as `Doc<"TableName">`.
-- Keep schemaValidation to false in the schema file.
-- You must correctly type your code so that it passes the type checker.
-- You must handle null / undefined cases of your convex queries for both frontend and backend, or else it will throw an error that your data could be null or undefined.
-- Always use the `@/folder` path, with `@/convex/folder/file.ts` syntax for importing convex files.
-- This includes importing generated files like `@/convex/_generated/server`, `@/convex/_generated/api`
-- Remember to import functions like useQuery, useMutation, useAction, etc. from `convex/react`
-- NEVER have return type validators.
+| Command | Does |
+| --- | --- |
+| `bun run dev` | Vite dev server |
+| `bun run test` | Full Vitest suite |
+| `bun run lint` | ESLint |
+| `bun run build` | Typecheck + production build |
+| `bun run format` | Prettier |
+
+### Before you push
+
+```bash
+bun run test && bunx convex dev --once && bunx tsc -b --noEmit && bun run lint
+```
+
+The platform runs the typecheck automatically after each change. If you edited
+anything under `src/convex/`, the Convex push must succeed first.
+
+## Testing
+
+**467 tests across 29 files**, all passing.
+
+| Area | Files |
+| --- | --- |
+| End-to-end journeys | `workflows.test.ts` |
+| Federation isolation | `superAdmin.test.ts` |
+| Payments & crypto | `payments.test.ts`, `cryptoHex.test.ts` |
+| Booking lifecycle | `bookings.test.ts`, `bookingGroups.test.ts`, `groupWelfare.test.ts` |
+| Governance | `admin.test.ts`, `societies.test.ts`, `workerAdmin.test.ts`, `disputes.test.ts` |
+| Workers | `artisans.test.ts`, `workSamples.test.ts`, `customServices.test.ts` |
+| Sign-in | `workerAuth.test.ts`, `demoAdmin.test.ts`, `i18n.test.ts` |
+| Geospatial | `geo.test.ts`, `useLocation.test.ts` |
+| Forecasting | `forecastAi.test.ts`, `weather.test.ts`, `forecasts.test.ts` |
+| Rate limiting | `rateLimit.test.ts` |
+| Rendering | `pages.test.tsx` (all 16 pages) |
+
+### Harnesses
+
+- **`src/test/convexHarness.ts`** — runs real Convex functions against
+  `convex-test`, with real database reads and writes, not mocks. Seed helpers
+  (`seedWorker`, `seedAdmin`, `seedBooking`, …) and bound identities
+  (`x.as.mutation(fn, args)`) let a test act as a specific signed-in user.
+- **`src/test/setup.tsx`** — mocks the reactive client, recording `useQuery`,
+  `useMutation`, `useAction` **and `signIn`** calls. The `signIn` recorder
+  flattens `FormData` exactly as the real Convex Auth client does, which is
+  what makes it possible to assert on the OTP send/verify contract.
+- **`src/test/renderHarness.tsx`** — mounts a page in a router with the
+  language provider, so `useParams` and `t()` resolve as in the app.
+
+### Conventions
+
+Tests that pin a bug should be checked against the bug: revert the fix and
+confirm the test fails. A test that cannot fail is not evidence.
+
+## Security posture
+
+- **Rate limiting** is fixed-window and per-subject, never global. A shared
+  counter would let one attacker exhaust a budget and lock out every real user
+  at once, turning spam protection into a denial of service against your own
+  members. Email and phone subjects are hashed.
+- **Throttling sits outside the auth providers** because Convex Auth hands
+  `sendVerificationRequest` the request params and no database context. This is
+  a known, documented limitation: it stops the ordinary client and any script
+  reusing the flow, but a caller invoking the auth endpoint directly bypasses
+  it. A hard guarantee would need a custom provider or an edge function.
+- **Phone numbers are normalised before hashing** so that `9876543210`,
+  `09876543210` and `+91 98765 43210` spend the same budget rather than
+  bypassing the limit by re-spelling.
+- **Work-sample images are purged** once the board has ruled. The verdict is
+  the record; the photograph is personal data that does not need to outlive it.
+- **Privileged actions are audited** in an append-only log.
+- **Secrets live in the deployment environment**, never in source — anything
+  written in a file here ships with the deployment.
+
+## Accessibility & localisation
+
+- **Five languages**: English, हिन्दी, తెలుగు, தமிழ், বাংলা. The i18n test fails
+  the build if a key used in the app is missing from the English dictionary,
+  if a regional dictionary drops a key the app renders, or if English carries a
+  key nothing renders.
+- **Voice-first affordances** for low-literacy and field users, including a
+  voice-skill quiz that issues the trade credential.
+- **Non-ASCII dictionaries live in side modules** (`src/lib/i18n.*.ts`) merged
+  by `initBnGateway()`; `src/lib/i18n.tsx` keeps the English base. Each side
+  module is registered in `effectiveKeys` in the i18n test.
+- **Coarse, honest availability.** Slots are bit flags over whole days, not a
+  minute-resolution calendar — a household books "Thursday evening", and a
+  fine-grained calendar is a lie about what a worker walking between three jobs
+  can promise.
+
+## Known limitations
+
+Stated plainly, because a prototype that hides these is harder to trust:
+
+- **SMS delivery is untested end-to-end.** Everything up to handing the code
+  to Vonage is covered by tests; the live request is not, because no
+  credentials were available during development.
+- **`runForecast` is admin-gated but unthrottled** — it bills a Gemini call.
+  Add a `forecast` scope to `LIMITS` before exposing it more widely.
+- **Rejected work samples keep their image.** Only approved ones are purged.
+- **Booking-location GPS is client-reported.** Adequate for dispatch, not a
+  tamper-evident audit trail.
+- **A full-history run of `forecastAi.test.ts` is occasionally flaky under
+  parallel load**; it passes in isolation. Worth pinning down so the suite is a
+  reliable signal.
+- **Storage for work-sample images is local to the Convex deployment**; a
+  production rollout would want retention and backup policy.
+
+## License
+
+Proprietary — built for SIH 2026 under the Ministry of Cooperation problem
+statement 26089.
