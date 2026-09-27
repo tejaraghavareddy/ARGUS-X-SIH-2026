@@ -546,6 +546,41 @@ after it. A bare URL is what the form and the judge's browser both expect.
 PASTE_YOUR_YOUTUBE_URL_HERE
 ```
 
+### The link supplied so far — READ THIS BEFORE SUBMITTING
+
+```
+https://drive.google.com/file/d/17Rj61lNoXXd1pwv7U49EJk8nqv6z25Cp/view?usp=drivesdk
+```
+
+**This is a Google Drive file link. The field asks for a YouTube link.** The two
+are not interchangeable, and a Drive link in this field is a poor substitute:
+
+- A judge clicking it lands on a Drive preview page, not a video that plays.
+- Drive previews frequently fail to render in embedded contexts, and can present
+  a download prompt or a sign-in wall instead of the content.
+- An automated fetch of this exact URL returned `401 Unauthorized`. That is most
+  likely Drive refusing a bot rather than a broken share, but it is precisely the
+  symptom a judge would hit if the file is still on **Restricted** sharing.
+
+**Decide which of these the file actually is:**
+
+| If the Drive file is… | It belongs in | Action |
+| --- | --- | --- |
+| The PPT or the proposal PDF | **Field 5 — Idea Template** | Download it and attach the file. Do NOT put the link in field 6. |
+| A video file | Nowhere useful | Upload to YouTube as **Unlisted**, then send me the `youtu.be` or `watch?v=` URL. A Drive-hosted video will not embed. |
+| Neither / unclear | — | Tell me what it is and I will place it correctly. |
+
+**If you have no YouTube video and the deadline is close**, you can still put the
+Drive link in field 6 — the field is optional, so a working link beats a blank.
+But first open the share settings and confirm:
+
+> Drive → right-click the file → **Share → General access → Anyone with the
+> link → Viewer**
+
+Then verify it the way a judge would: open a **private/incognito window**, paste
+the URL, and confirm the file actually opens without a sign-in. Do not skip this
+step; it is the single most common way a submission link fails silently.
+
 **Before you paste it, set these three things on the video** — they cost nothing
 and decide whether a judge clicks it:
 
