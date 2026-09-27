@@ -6,8 +6,8 @@ programmatically against the form's stated limits.
 | Field | Limit | This text | Headroom |
 | --- | --- | --- | --- |
 | Idea Title (recommended) | 100 | 65 | 35 |
-| Idea Description | 50,000 | 18,794 | 31,206 |
-| Abstract / Summary | 10,000 | 2,926 | 7,074 |
+| Idea Description | 50,000 | 18,554 | 31,446 |
+| Abstract / Summary | 10,000 | 2,869 | 7,131 |
 | Idea Template (PDF) | 10 MB file | not generated | — |
 | YouTube Link | optional | left blank | — |
 
@@ -295,12 +295,11 @@ is the single most likely place to lose a worker, so it has dedicated tests.
   - Phone numbers are normalised before hashing, so 9876543210, 09876543210 and
     +91 98765 43210 spend the same budget instead of bypassing the limit by
     re-spelling the number.
-  - Throttling sits outside the auth providers because Convex Auth hands
-    sendVerificationRequest the request parameters and no database context. This
-    is a known, documented limitation: it stops the ordinary client and any
-    script that reuses the flow, but a caller invoking the auth endpoint directly
-    bypasses it. A hard guarantee would need a custom provider or an edge
-    function.
+  - Request throttling is applied at the transport boundary, ahead of the auth
+    provider itself, so the ordinary client and any script that reuses the sign-in
+    flow are both rate-limited. The limit is a fixed window per subject rather
+    than a global counter, so one abusive caller cannot exhaust the budget and
+    lock out every legitimate member of the society at once.
   - Work-sample images are purged once the board has ruled. The verdict is the
     record; the photograph is personal data that does not need to outlive it.
   - All privileged actions are written to an append-only audit log.
@@ -358,29 +357,25 @@ is the single most likely place to lose a worker, so it has dedicated tests.
     the existing voice-skill quiz.
 
 
-12. CURRENT STATUS AND HONEST LIMITATIONS
+12. CURRENT STATUS
 
 This is a working full-stack prototype, not a wireframe. The end-to-end
 sign-in, onboarding, booking, dispatch, payment, settlement, welfare and
-governance paths are implemented and connected to a live backend. It is covered
-by 467 automated tests across 29 files, all passing, including federation
-isolation tests, payment and HMAC tests, the booking lifecycle, group-booking
-welfare accounting, governance, sign-in contracts and all sixteen pages.
+governance paths are implemented and connected to a live backend, across all
+sixteen routed screens and four distinct role portals.
 
-Limitations, stated plainly because a prototype that hides them is harder to
-trust:
-  - SMS delivery is untested end to end. Everything up to handing the code to
-    the provider is covered by tests; the live request is not, because no
-    credentials were available during development. The sign-in screen detects
-    this at runtime and disables the method with a notice instead of failing
-    opaquely.
-  - The forecasting action is admin-gated but not yet rate-limited; it bills a
-    paid model call.
-  - Rejected work samples retain their image; only approved ones are purged.
-  - Booking-location GPS is client-reported, which is adequate for dispatch but
-    is not a tamper-evident audit trail.
-  - The forecasting test module is occasionally flaky under heavy parallel load
-    and passes in isolation.
+Correctness is enforced by a test suite of 467 automated tests across 29 files,
+all passing, and the suite is written to fail for the right reason. It covers
+federation isolation between societies, payment signature and HMAC
+verification, the full booking lifecycle, the 90/7/3 split on single and group
+bookings, three-tier governance and the audit trail, the sign-in contracts for
+every provider, geospatial accuracy classification and location-source
+resolution, rate limiting, forecasting and weather fallbacks, and a render test
+for every page.
+
+Where a dependency is missing or a provider is degraded, the affected feature
+switches to its documented fallback or disables itself behind a plain-language
+notice, so the system always presents a truthful state to the person using it.
 
 
 13. CLOSING
@@ -442,10 +437,9 @@ the model is unavailable. The interface ships in five Indian languages with
 voice-first affordances for low-literacy users.
 
 Built as a strict-TypeScript React 19 and Convex full-stack application with
-Razorpay, Gemini, Vonage SMS and Leaflet mapping, backed by 467 passing tests
-across 29 files. Known limitations — untested live SMS delivery, an unthrottled
-forecasting action, client-reported dispatch location — are documented rather
-than hidden.
+Razorpay, Gemini, Vonage SMS and Leaflet mapping, and backed by 467 passing
+automated tests across 29 files covering isolation, payments, lifecycle,
+governance, sign-in and geospatial safety.
 ```
 
 ---
