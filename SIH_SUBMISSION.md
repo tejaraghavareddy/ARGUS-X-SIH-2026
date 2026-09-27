@@ -480,17 +480,96 @@ belongs.
 
 ## 5. Idea Template (PDF, max 10MB)
 
-The form expects a **PDF** against a downloadable template. Two options:
+The form field is a **file upload**, so this one cannot be typed — you attach a
+file. Upload the PPT as an **exported PDF** (in PowerPoint: File → Export →
+Create PDF/XPS, or File → Save As → PDF).
 
-- **A.** Save a draft first (`Save as Draft` is available on the form), then use
-  the material above as the basis for your template.
-- **B.** Ask me to generate the PDF for you from this content.
+### 5a. The one-line text to paste into the template's cover page
+
+```
+Sahakar Seva — A Cooperative-Owned Gig-Work Federation Marketplace
+SIH 2026 | Problem Statement 26089 | Ministry of Cooperation
+Category: Coding and Programming
+```
+
+### 5b. Slide-by-slide outline — match this to your PPT
+
+Keep it to **10–12 slides**. Judges read the deck once; every slide that is not
+argument is a slide that costs you attention.
+
+| # | Slide title | What goes on it | The point of the slide |
+| --- | --- | --- | --- |
+| 1 | Sahakar Seva | Name, PS 26089, category, one-line: "A cooperative-owned gig-work federation marketplace" | Frames the whole deck in five seconds |
+| 2 | The problem | Household side and worker side, side by side. No verified identity, opaque pricing, no recourse; broker takes a cut, worker has no welfare, no path from "good today" to "secure tomorrow" | The two-sided pain, stated in the user's words |
+| 3 | The gap | The cooperative society already has the membership, the trust, the office, the mandate — and keeps its register on paper, dispatches on WhatsApp, settles in cash | This is the insight: the institution exists, only the software is missing |
+| 4 | Our solution | The three-screen summary: household books a verified worker; worker earns 90% and a welfare balance; society governs one federation | What it is, before any detail |
+| 5 | **Cooperation, enforced in code** | `WORKER_SHARE_RATE = 0.9 / WELFARE_RATE = 0.07 / OPS_RATE = 0.03`, shown as constants in the settlement mutation. "No operator UI changes these. No admin override." | **Your strongest slide.** This is what separates you from every other cooperative-labelled submission |
+| 6 | The welfare ledger | 7% accrues per booking to a per-worker balance; a super admin allocates it to schemes; the worker watches it move | Proves 7% is accounted for, not marketing |
+| 7 | Worker journey | SMS OTP → four-gate onboarding (profile, KYC, voice quiz, setup) → credential `SSC-YYYY-XXXX` → go online → accept → settle | Shows the operational reality, not a wishlist |
+| 8 | Household journey | Six trades, transparent price, **group cost-sharing**, direct UPI to the worker's VPA (zero commission), **Safety Mode**, live GPS radar, double-blind disputes | The features a household actually feels |
+| 9 | Architecture | Convex as single source of truth, reactive queries, V8 vs node runtimes, the `httpAction` constraint, federation scoping in the data layer | Shows you built it, not designed it |
+| 10 | Trust, safety and scope | Razorpay HMAC + idempotent settlement, per-subject hashed rate limits, GPS plausibility rejection, append-only audit log, 14 tables, 90/7/3 | Pre-empts "how do you know this is safe" |
+| 11 | Status and evidence | Live prototype, 16 screens, 4 role portals, **478 tests / 29 files, all passing**, five languages, voice-first | Proof it runs |
+| 12 | Scope and close | Cooperative-to-cooperative federated commerce, credit against the welfare ledger, NOSC-mapped skills; close on: "the person who benefits most from a good week is the worker" | Ends on the thesis, not on thanks |
+
+### 5c. If your PPT is a different shape
+
+If you already have the PPT built, do not rebuild it — just check it answers
+these seven, in this order, and that each has evidence attached:
+
+1. What is broken, for whom?
+2. Why has nobody fixed it?
+3. What did you build?
+4. **Why is it actually cooperative and not just branded that way?**
+5. How does it work technically?
+6. How do you know it works?
+7. What happens next?
+
+If slide 4 is missing or vague, that is the one to fix. Everything else on this
+list is supporting evidence for that claim.
+
+### 5d. File-size check before upload
+
+Keep the PDF under 10MB. Export with **"Minimum size (best for sharing)"** or
+150 DPI rather than "High fidelity" — a text deck at 150 DPI is well under 1MB,
+and image-heavy exports are what blow the limit. Check the size after exporting
+by right-clicking the PDF → Properties.
 
 ---
 
 ## 6. Youtube Link (optional)
 
-Leave blank. Optional fields left empty do not count against a submission, and a
-link to an unlisted half-finished demo is worse than no link. Add one later if
-you record a 3-minute walkthrough before the deadline.
+Paste the URL as-is, nothing else — no `<https://>`, no trailing text, no title
+after it. A bare URL is what the form and the judge's browser both expect.
+
+```
+PASTE_YOUR_YOUTUBE_URL_HERE
+```
+
+**Before you paste it, set these three things on the video** — they cost nothing
+and decide whether a judge clicks it:
+
+| Setting | Value |
+| --- | --- |
+| Visibility | **Unlisted**, not private. A private link will not play for a judge, and "request access" reads as an error. Unlisted plays for anyone with the link. |
+| Title | `Sahakar Seva — Cooperative-Owned Gig-Work Federation Marketplace (SIH 2026, PS 26089)` |
+| Description | First line: the one-line pitch. Then: `Problem Statement 26089, Ministry of Cooperation. Category: Coding and Programming.` Then: `Demo: worker onboarding → group booking → 90/7/3 settlement → welfare balance → society governance.` |
+
+**Ideal length is 3–4 minutes.** Judges will not watch 10. The arc that fits:
+
+| Time | Show |
+| --- | --- |
+| 0:00–0:30 | The problem, in one sentence each for the household and the worker. Do not read the slide. |
+| 0:30–1:15 | Worker signs in by phone OTP, clears the voice-skill quiz, earns the `SSC-YYYY-XXXX` credential |
+| 1:15–2:15 | A household books, Safety Mode on, live radar tracking the worker en route |
+| 2:15–3:00 | **The money shot.** Settle the booking and show the 90/7/3 split and the worker's welfare balance moving. This is the slide the whole deck exists to reach. |
+| 3:00–3:30 | Admin board reviewing a work sample, and the image being released after the verdict |
+| 3:30–4:00 | Close: the federation admin console, scoped to one society |
+
+Record with narration, not just cursor moves. Have the demo data already seeded
+so nothing on screen is empty, and switch to a real district and real worker
+names — a demo full of "Test User 1" costs credibility that no script recovers.
+
+If the video is not ready, **leave the field blank**. An empty optional field
+costs nothing; a broken or half-finished link costs more than not linking.
 ```
