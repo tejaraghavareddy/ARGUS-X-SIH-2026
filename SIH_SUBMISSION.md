@@ -454,22 +454,27 @@ governance, sign-in and geospatial safety.
 
 ## 4. Technology Bucket
 
-Pick **the closest match to one of these**, in this priority order:
+**Choose: `Coding and Programming`**
 
-1. **Web Development / Full Stack** (or "Software Development", "Web
-   Development", "Full Stack Development", "Other Software")
-2. **Artificial Intelligence / AI-ML** (only if your dropdown has no
-   full-stack or web option, or if it allows multiple selections)
-3. **Blockchain / Fintech / Payments** (only as a secondary pick, if the form
-   allows two)
+The field is single-select. The available options are:
 
-Rationale: the submission is a complete production-intent web application
-(React 19 + Convex + Razorpay + Leaflet) that happens to *use* AI as one feature.
-Judges bucket by what you built, not by what you called. If multiple selections
-are allowed, Web/Full Stack first, AI-ML second.
+| Option | Verdict |
+| --- | --- |
+| **Coding and Programming** | **Correct.** The deliverable is software: React 19, strict TypeScript, Convex, 16 screens, 4 role portals, 478 tests |
+| AI/ML, Cloud Computing, Blockchain | Wrong. Gemini demand forecasting is one feature and Convex is the hosting substrate, not the contribution. This bucket invites a judge to evaluate an ML contribution, and the honest answer is that forecasting is a bolt-on |
+| Big Data Analysis | No — no warehouse, no pipelines, no dataset analysis |
+| Information Security | No — the security work is real but supporting, not the idea |
+| IoT and Electronics / Mechatronics | No — no hardware in the build |
+| System Administration & Networking | No |
+| Project Management | No |
+| Social Media Management & Digital Marketing | No |
+| Other | Only if nothing above fits; something does |
 
-> I cannot read your dropdown's option list from the screenshot. Choose the
-> option whose wording is closest to item 1 above.
+Rationale: the bucket tells a judge what lens to evaluate you through. Under
+"Coding and Programming" you are judged on architecture, working software and
+engineering discipline, which is where this project is strongest. The AI and
+cloud usage is already covered in section 4.6 of the description, where it
+belongs.
 
 ---
 
