@@ -543,43 +543,49 @@ Paste the URL as-is, nothing else — no `<https://>`, no trailing text, no titl
 after it. A bare URL is what the form and the judge's browser both expect.
 
 ```
-PASTE_YOUR_YOUTUBE_URL_HERE
+https://youtu.be/Q7fcMbnm1ks
 ```
 
-### The link supplied so far — READ THIS BEFORE SUBMITTING
+**Use the short form above.** The `?si=E_8VptqvSwlYicn4` suffix on the original
+link is a private share-tracking token; it identifies you to Google, not the
+video, and there is no reason to hand it to a judging panel. The bare
+`youtu.be` URL is the canonical public form and was verified live and
+embeddable (oEmbed resolved, HTTP 200).
+
+### Video metadata — one fix before you submit
+
+| Field | Current | Recommended |
+| --- | --- | --- |
+| Title | `Sahakar Seva - Cooperative Gig Services Platform for Household & CommunityServices` | `Sahakar Seva — Cooperative-Owned Gig-Work Federation Marketplace (SIH 2026, PS 26089)` |
+| Visibility | Working and embeddable | Leave as-is if already unlisted or public — both play for a judge |
+| Channel | `@Unstoppable_tej` | No action; a real name reads better than a handle, but this is cosmetic |
+
+Two problems with the current title. There is a **missing space** in
+"CommunityServices", and the title leads with the generic part of the idea
+("Gig Services Platform") instead of the part that distinguishes it
+("Cooperative-Owned"). This title is what a judge sees in the submission portal
+and in any search result, so it is worth the thirty seconds to fix in
+YouTube Studio → video details → title → save.
+
+### Supplementary document link (not a form field)
 
 ```
 https://drive.google.com/file/d/17Rj61lNoXXd1pwv7U49EJk8nqv6z25Cp/view?usp=drivesdk
 ```
 
-**This is a Google Drive file link. The field asks for a YouTube link.** The two
-are not interchangeable, and a Drive link in this field is a poor substitute:
+Now that field 6 has a real YouTube link, this Drive link is no longer a
+substitute for the video — a Drive preview does not embed, and judges would hit
+a preview page instead of a demo. Sharing has been confirmed set to
+**Anyone with the link**, so it will open for anyone who has it.
 
-- A judge clicking it lands on a Drive preview page, not a video that plays.
-- Drive previews frequently fail to render in embedded contexts, and can present
-  a download prompt or a sign-in wall instead of the content.
-- An automated fetch of this exact URL returned `401 Unauthorized`. That is most
-  likely Drive refusing a bot rather than a broken share, but it is precisely the
-  symptom a judge would hit if the file is still on **Restricted** sharing.
+Use it for whichever of these applies:
 
-**Decide which of these the file actually is:**
+| What the Drive file is | Where it goes |
+| --- | --- |
+| The PPT or proposal PDF | **Field 5 — Idea Template.** Download it and attach the file itself. That field is an upload, not a URL. |
+| Supporting documents (screenshots, the 19k write-up, the data model) | Optional extra. If the form has no spare field, mention it in the description's closing section as "further documentation available on request". |
 
-| If the Drive file is… | It belongs in | Action |
-| --- | --- | --- |
-| The PPT or the proposal PDF | **Field 5 — Idea Template** | Download it and attach the file. Do NOT put the link in field 6. |
-| A video file | Nowhere useful | Upload to YouTube as **Unlisted**, then send me the `youtu.be` or `watch?v=` URL. A Drive-hosted video will not embed. |
-| Neither / unclear | — | Tell me what it is and I will place it correctly. |
-
-**If you have no YouTube video and the deadline is close**, you can still put the
-Drive link in field 6 — the field is optional, so a working link beats a blank.
-But first open the share settings and confirm:
-
-> Drive → right-click the file → **Share → General access → Anyone with the
-> link → Viewer**
-
-Then verify it the way a judge would: open a **private/incognito window**, paste
-the URL, and confirm the file actually opens without a sign-in. Do not skip this
-step; it is the single most common way a submission link fails silently.
+**Do not put it in field 6.** Field 6 is the YouTube link, and it now has one.
 
 **Before you paste it, set these three things on the video** — they cost nothing
 and decide whether a judge clicks it:
