@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { api, must, seedArtisan, seedBooking, seedCustomer, seedWorker, setupTest } from "./convexHarness";
+import { api, must, seedAdmin, seedArtisan, seedBooking, seedCustomer, seedWorker, setupTest } from "./convexHarness";
 
 /**
  * Rate limiting must be per-subject, never global: a shared counter lets one
@@ -136,5 +136,98 @@ describe("rate limiting", () => {
 
     const row = must(await t.run((ctx) => ctx.db.get(b)), "booking");
     expect(row.customerId).toBe(c.id);
+  });
+
+  it("caps billable forecast runs", async () => {
+    // Each forecast run is a paid Gemini call. An admin gate is not a budget.
+    const t = setupTest();
+    const a = await seedAdmin(t);
+    for (let i = 0; i < 6; i++) {
+      expect(await a.as.mutation(api.forecastThrottle.requestForecastRun, {})).toMatchObject({
+        ok: true,
+      });
+    }
+    await expect(
+      a.as.mutation(api.forecastThrottle.requestForecastRun, {}),
+    ).rejects.toThrow("Too many attempts");
+  });
+
+  it("keys the forecast budget to the federation, not to the officer", async () => {
+    // A society must not be able to multiply its Gemini allowance by hiring
+    // more officers. Both admins below are unscoped ("all") and therefore share
+    // one budget.
+    const t = setupTest();
+    const a = await seedAdmin(t);
+    const b = await seedAdmin(t, { email: "second.board@sahakar.demo" });
+    expect(a.id).not.toBe(b.id);
+
+    for (let i = 0; i < 6; i++) {
+      await a.as.mutation(api.forecastThrottle.requestForecastRun, {});
+    }
+    // The second officer inherits the exhausted budget rather than a fresh one.
+    await expect(
+      b.as.mutation(api.forecastThrottle.requestForecastRun, {}),
+    ).rejects.toThrow("Too many attempts");
+  });
+
+  it("refuses a forecast run from anyone who is not an officer", async () => {
+    const t = setupTest();
+    const c = await seedCustomer(t);
+    await expect(
+      c.as.mutation(api.forecastThrottle.requestForecastRun, {}),
+    ).rejects.toThrow("Forbidden");
+    await expect(
+      t.mutation(api.forecastThrottle.requestForecastRun, {}),
+    ).rejects.toThrow("Not authenticated");
+  });
+
+  it("keeps one society's exhausted forecast budget off another society", async () => {
+    // The per-federation key, with two genuinely distinct societies. Officers
+    // of the same society share a budget; a different society is unaffected.
+    const t = setupTest();
+    const owner = await seedAdmin(t);
+    const mkSociety = (code: string) =>
+      t.run(async (ctx) =>
+        ctx.db.insert("societies", {
+          name: `Society ${code}`,
+          district: "Kurnool",
+          state: "Andhra Pradesh",
+          code,
+          registrationNo: `SSC/REG/2026/${code}`,
+          status: "active",
+          createdAt: Date.now(),
+          registeredBy: owner.id,
+        }),
+      );
+
+    const alpha = await mkSociety("AP-KNL-01");
+    const beta = await mkSociety("AP-KNL-02");
+    const a1 = await seedAdmin(t, { email: "alpha1@sahakar.demo", societyId: alpha });
+    const a2 = await seedAdmin(t, { email: "alpha2@sahakar.demo", societyId: alpha });
+    const b1 = await seedAdmin(t, { email: "beta1@sahakar.demo", societyId: beta });
+
+    for (let i = 0; i < 6; i++) {
+      await a1.as.mutation(api.forecastThrottle.requestForecastRun, {});
+    }
+    // Same society, different officer — shared budget, so also refused.
+    await expect(
+      a2.as.mutation(api.forecastThrottle.requestForecastRun, {}),
+    ).rejects.toThrow("Too many attempts");
+    // A different society is not collateral damage.
+    expect(
+      await b1.as.mutation(api.forecastThrottle.requestForecastRun, {}),
+    ).toMatchObject({ ok: true, scope: "society" });
+  });
+
+  it("rejects an unknown forecast kind without spending budget", async () => {
+    const t = setupTest();
+    const a = await seedAdmin(t);
+    await expect(
+      a.as.mutation(api.forecastThrottle.requestForecastRun, { kind: "gossip" }),
+    ).rejects.toThrow("Unknown forecast kind");
+    // The refusal must be free: the officer's real allowance is untouched.
+    expect(await a.as.mutation(api.forecastThrottle.requestForecastRun, { kind: "forecast" })).toMatchObject({
+      ok: true,
+    });
   });
 });

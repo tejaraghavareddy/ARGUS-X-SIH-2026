@@ -305,7 +305,7 @@ anything under `src/convex/`, the Convex push must succeed first.
 
 ## Testing
 
-**467 tests across 29 files**, all passing.
+**478 tests across 29 files**, all passing.
 
 | Area | Files |
 | --- | --- |
@@ -382,16 +382,36 @@ Stated plainly, because a prototype that hides these is harder to trust:
 - **SMS delivery is untested end-to-end.** Everything up to handing the code
   to Vonage is covered by tests; the live request is not, because no
   credentials were available during development.
-- **`runForecast` is admin-gated but unthrottled** — it bills a Gemini call.
-  Add a `forecast` scope to `LIMITS` before exposing it more widely.
-- **Rejected work samples keep their image.** Only approved ones are purged.
 - **Booking-location GPS is client-reported.** Adequate for dispatch, not a
-  tamper-evident audit trail.
-- **A full-history run of `forecastAi.test.ts` is occasionally flaky under
-  parallel load**; it passes in isolation. Worth pinning down so the suite is a
-  reliable signal.
+  tamper-evident audit trail. It is tamper-*detectable* — see the plausibility
+  work in `src/lib/geo.ts` — but a determined client can still lie.
 - **Storage for work-sample images is local to the Convex deployment**; a
-  production rollout would want retention and backup policy.
+  production rollout would want retention and backup policy. The purge path
+  itself is now complete (below); what is missing is an automatic schedule.
+- **The OTP and forecast throttles are client-mediated.** They stop the
+  ordinary client and any script that reuses the documented flow, but a caller
+  invoking the auth or action endpoint directly bypasses them. A hard guarantee
+  needs a custom provider or an edge function.
+
+### Recently closed
+
+Kept here rather than deleted, because the reasoning is worth more than the
+result:
+
+- **The forecasting test was nondeterministic.** `forecastAi.test.ts` made a
+  live HTTPS request to `api.open-meteo.com` (nothing stubbed `fetch`) and read
+  `new Date()` for the season and festival window, so a run crossing midnight on
+  a month boundary could reason about a different month than the assertions
+  expected. The clock is now a parameter and the network is a fixture. Verified
+  over repeated full-suite runs rather than assumed fixed.
+- **`runForecast` was unthrottled.** It bills a Gemini call, and an admin gate is
+  not a budget. There is now a `forecast` scope (6/hour) keyed on the officer's
+  **federation**, spent by `forecastThrottle.requestForecastRun` before the
+  action runs — so a society cannot multiply its allowance by hiring officers.
+- **Rejected work samples kept their image.** A rejection is at least as
+  personal as an approval, so the purge now runs on *any* ruling, and
+  `sweepUnpurgedImages` retries the files whose storage delete failed at review
+  time. The written verdict is the audit trail; the photograph is not.
 
 ## License
 

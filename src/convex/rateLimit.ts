@@ -53,6 +53,12 @@ export const LIMITS = {
    *  a database write: a customer re-clicking "Pay" must not mint a hundred
    *  unpaid orders. Generous enough for a genuine fumble or two. */
   payment: { max: 8, windowMs: HOUR },
+  /** Running a demand forecast. Admin-gated, but a gate is not a budget: each
+   *  run is a billable Gemini call, so without a limit a single officer (or a
+   *  script holding one admin token) can drain the cooperative's model
+   *  allowance overnight. Keyed per FEDERATION rather than per user, so a
+   *  society cannot multiply its budget by adding officers. */
+  forecast: { max: 6, windowMs: HOUR },
 } as const;
 
 export type RateLimitScope = keyof typeof LIMITS;

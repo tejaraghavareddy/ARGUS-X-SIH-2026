@@ -220,22 +220,30 @@ export const reviewSample = mutation({
 
     const now = Date.now();
 
-    // Release the picture on approval, and never let a storage hiccup cost the
-    // worker their verdict: if the delete fails the row keeps its storageId
-    // (so the file is still visible and can be swept later) and the verdict
-    // stands either way.
+    // Release the picture on ANY ruling, not just an approval. A rejection is
+    // exactly as personal as an approval — arguably more so, since the worker
+    // is being turned away and the photo of the work that failed them is the
+    // last thing that should outlive the decision. The board's written verdict
+    // is the record; the photograph is not.
+    //
+    // Never let a storage hiccup cost the worker their verdict: if the delete
+    // fails the row keeps its storageId (so the file is still visible and
+    // `sweepUnpurgedImages` can retry it) and the verdict stands either way.
     let release: { storageId: undefined; imagePurgedAt: number; verdictText: string } | null =
       null;
-    if (args.approve && sample.storageId) {
+    if (sample.storageId) {
       try {
         await ctx.storage.delete(sample.storageId);
         const note = args.note?.trim();
+        const date = new Date(now).toLocaleDateString("en-IN");
+        const outcome = args.approve
+          ? `Work evidence verified by the federation board on ${date}.`
+          : `Work evidence was not verified by the federation board on ${date}.`;
         release = {
           storageId: undefined,
           imagePurgedAt: now,
           verdictText:
-            `Work evidence verified by the federation board on ` +
-            `${new Date(now).toLocaleDateString("en-IN")}.` +
+            outcome +
             (note ? ` Board note: ${note}` : "") +
             " The photo was released after review and is no longer stored.",
         };
@@ -287,9 +295,62 @@ export const reviewSample = mutation({
       artisan.userId,
       "worker_removed",
       "Work sample needs another attempt",
-      `The board could not verify this work sample. Reason: ${args.note?.trim() || "unclear evidence"}. Please upload clearer photos of your work (tools in use, finished jobs, you at work) and resubmit.`,
+      `The board could not verify this work sample. Reason: ${args.note?.trim() || "unclear evidence"}. Please upload clearer photos of your work (tools in use, finished jobs, you at work) and resubmit. The photo you submitted has been released and is no longer stored.`,
     );
     return { skillVerified: false };
+  },
+});
+
+/**
+ * Retry the image purge for samples that were ruled on but whose storage delete
+ * failed at the time.
+ *
+ * `reviewSample` treats a storage failure as non-fatal — the verdict is
+ * recorded and the row keeps its `storageId` so the file is not orphaned
+ * invisibly. That is the right trade-off at review time (a transient storage
+ * error must not cost a worker their decision), but it does leave a gap: the
+ * image outlives the ruling until something comes back for it. This is that
+ * something.
+ *
+ * Rows this touches are exactly the ones where a decision exists and an image
+ * does not need to: `status` is `approved` or `rejected`, `reviewedAt` is set,
+ * and a `storageId` is still attached. A pending sample is never touched —
+ * the worker still needs to see their own upload.
+ *
+ * Officers only. Each failure is counted and reported rather than thrown, so
+ * one stubborn file does not abort the sweep and leave the rest unretried.
+ */
+export const sweepUnpurgedImages = mutation({
+  args: {},
+  handler: async (ctx): Promise<{ swept: number; failed: number }> => {
+    const adminId = await requireUser(ctx);
+    if (!(await isAdminUser(ctx, adminId))) throw new Error("Forbidden");
+
+    const reviewed = await ctx.db
+      .query("workSamples")
+      .withIndex("by_status", (q) => q.eq("status", "approved"))
+      .collect();
+    const rejected = await ctx.db
+      .query("workSamples")
+      .withIndex("by_status", (q) => q.eq("status", "rejected"))
+      .collect();
+
+    let swept = 0;
+    let failed = 0;
+    for (const sample of [...reviewed, ...rejected]) {
+      if (!sample.storageId || !sample.reviewedAt) continue;
+      try {
+        await ctx.storage.delete(sample.storageId);
+        await ctx.db.patch(sample._id, {
+          storageId: undefined,
+          imagePurgedAt: Date.now(),
+        });
+        swept += 1;
+      } catch {
+        failed += 1;
+      }
+    }
+    return { swept, failed };
   },
 });
 

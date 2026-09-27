@@ -6,7 +6,7 @@ programmatically against the form's stated limits.
 | Field | Limit | This text | Headroom |
 | --- | --- | --- | --- |
 | Idea Title (recommended) | 100 | 65 | 35 |
-| Idea Description | 50,000 | 18,554 | 31,446 |
+| Idea Description | 50,000 | 19,164 | 30,836 |
 | Abstract / Summary | 10,000 | 2,869 | 7,131 |
 | Idea Template (PDF) | 10 MB file | not generated | — |
 | YouTube Link | optional | left blank | — |
@@ -300,8 +300,16 @@ is the single most likely place to lose a worker, so it has dedicated tests.
     flow are both rate-limited. The limit is a fixed window per subject rather
     than a global counter, so one abusive caller cannot exhaust the budget and
     lock out every legitimate member of the society at once.
-  - Work-sample images are purged once the board has ruled. The verdict is the
-    record; the photograph is personal data that does not need to outlive it.
+  - Every cost-bearing operation is budgeted, not merely permissioned. The
+    billable demand-forecast call is capped at six runs per hour per FEDERATION
+    rather than per user, so a society cannot multiply its model allowance by
+    adding officers, and one exhausted society is never a problem for another.
+  - Work-sample images are purged once the board has ruled, whichever way it
+    ruled. A rejection is at least as personal as an approval, so a photograph of
+    the work that failed a worker is the last thing that should outlive the
+    decision. A sweep retries any file whose deletion failed at review time, so
+    a transient storage error cannot leave a photograph on disk indefinitely.
+    The written verdict is the record; the photograph is not.
   - All privileged actions are written to an append-only audit log.
   - Secrets live in the deployment environment and are never written into source
     or into .env files tracked by the repository.
@@ -364,7 +372,7 @@ sign-in, onboarding, booking, dispatch, payment, settlement, welfare and
 governance paths are implemented and connected to a live backend, across all
 sixteen routed screens and four distinct role portals.
 
-Correctness is enforced by a test suite of 467 automated tests across 29 files,
+Correctness is enforced by a test suite of 478 automated tests across 29 files,
 all passing, and the suite is written to fail for the right reason. It covers
 federation isolation between societies, payment signature and HMAC
 verification, the full booking lifecycle, the 90/7/3 split on single and group
@@ -437,7 +445,7 @@ the model is unavailable. The interface ships in five Indian languages with
 voice-first affordances for low-literacy users.
 
 Built as a strict-TypeScript React 19 and Convex full-stack application with
-Razorpay, Gemini, Vonage SMS and Leaflet mapping, and backed by 467 passing
+Razorpay, Gemini, Vonage SMS and Leaflet mapping, and backed by 478 passing
 automated tests across 29 files covering isolation, payments, lifecycle,
 governance, sign-in and geospatial safety.
 ```

@@ -356,6 +356,7 @@ function GISPanel() {
 function ForecastPanel() {
   const latest = useQuery(api.forecasts.latest, {});
   const forecastAction = useAction(api.forecastAi.runForecast);
+  const forecastBudget = useMutation(api.forecastThrottle.requestForecastRun);
   const [forecasting, setForecasting] = useState(false);
   const [forecast, setForecast] = useState<Awaited<
     ReturnType<typeof forecastAction>
@@ -365,6 +366,9 @@ function ForecastPanel() {
   async function runForecast() {
     setForecasting(true);
     try {
+      // Spend the federation's forecast budget BEFORE the billable call, so an
+      // over-budget officer is refused before Gemini is ever invoked.
+      await forecastBudget({ kind });
       const result = await forecastAction({ kind });
       setForecast(result);
     } catch (e) {

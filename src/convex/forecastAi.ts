@@ -32,8 +32,13 @@ const FESTIVALS: Record<number, string> = {
   11: "Christmas / year-end demand",
 };
 
-function getSeasonalContext(): string {
-  const now = new Date();
+/**
+ * `now` is a parameter, not an internal `new Date()`, so a caller (and a test)
+ * can pin the season. Reading the clock inside meant a run that straddled
+ * midnight on a month boundary could reason about two different seasons, which
+ * is exactly the kind of nondeterminism that makes a suite untrustworthy.
+ */
+function getSeasonalContext(now: Date = new Date()): string {
   const month = now.getMonth();
   const s = SEASONS[month];
   const festival = FESTIVALS[month] ? ` Upcoming/notable festival: ${FESTIVALS[month]}.` : "";
@@ -277,7 +282,10 @@ export const runForecast = action({
     if (!isAdmin) throw new Error("Forbidden");
 
     const context = await ctx.runQuery(api.gis.forecastContext, {});
-    const season = getSeasonalContext();
+    // One clock read for the whole run: the season and the festival window must
+    // agree with each other, and both must be pinnable.
+    const now = new Date();
+    const season = getSeasonalContext(now);
     const kind = args.kind ?? "forecast";
 
     /**
@@ -291,7 +299,7 @@ export const runForecast = action({
      */
     const [weather, festivals] = await Promise.all([
       fetchWeather().catch(() => null),
-      Promise.resolve(festivalLine()),
+      Promise.resolve(festivalLine(now)),
     ]);
     const weatherLine = weather
       ? `Live 7-day weather for the district: ${weather.week.rainMm.toFixed(1)} mm rain across ${weather.week.rainDays} wet day(s), ${weather.week.minTempC.toFixed(0)}-${weather.week.maxTempC.toFixed(0)}°C. ${weather.implication}`

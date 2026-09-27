@@ -506,7 +506,10 @@ describe("workSamples: verified samples release their image", () => {
     expect(mine.filter((m) => m.hasImage)).toHaveLength(1);
   });
 
-  it("keeps the image for a REJECTED sample — the worker may appeal it", async () => {
+  it("releases the image for a REJECTED sample too, and leaves a verdict", async () => {
+    // A rejection is at least as personal as an approval — the photo of the
+    // work that failed the worker is the last thing that should outlive the
+    // decision. The written verdict is the record; the picture is not.
     const t = setupTest();
     const a = await seedAdmin(t);
     const w = await seedWorker(t);
@@ -523,10 +526,133 @@ describe("workSamples: verified samples release their image", () => {
     });
 
     const row = must(await t.run((ctx) => ctx.db.get(sampleId)), "sample");
-    expect(row.storageId).toBe(storageId);
-    expect(await t.run((ctx) => ctx.db.system.get(storageId))).not.toBeNull();
+    expect(row.storageId).toBeUndefined();
+    expect(row.imagePurgedAt).toBeTypeOf("number");
+    expect(await t.run((ctx) => ctx.db.system.get(storageId))).toBeNull();
+
+    // The row survives as the audit trail, and the worker sees a reason rather
+    // than an empty tile.
+    expect(row.status).toBe("rejected");
+    expect(row.verdictText).toContain("not verified");
+    expect(row.verdictText).toContain("Too blurry");
     const mine = await w.as.query(api.workSamples.mySamples);
-    expect(mine[0].hasImage).toBe(true);
+    expect(mine[0].hasImage).toBe(false);
+    expect(mine[0].verdictText).toContain("Too blurry");
+  });
+
+  it("does not release the image while the sample is still PENDING", async () => {
+    // The worker must still be able to see their own upload, and a board must
+    // still be able to judge it.
+    const t = setupTest();
+    const a = await seedAdmin(t);
+    const w = await seedWorker(t);
+    await seedArtisan(t, w.id);
+    const storageId = await seedStorageFile(t);
+    const sampleId = await w.as.mutation(api.workSamples.completeUpload, {
+      storageId,
+      mimeType: "image/png",
+    });
+
+    const row = must(await t.run((ctx) => ctx.db.get(sampleId)), "sample");
+    expect(row.storageId).toBe(storageId);
+    expect(row.imagePurgedAt).toBeUndefined();
+    expect(await t.run((ctx) => ctx.db.system.get(storageId))).not.toBeNull();
+    const queue = await a.as.query(api.workSamples.reviewQueue);
+    expect(queue[0].url).toBeTruthy();
+  });
+
+  it("sweeps a reviewed sample whose storage delete failed at review time", async () => {
+    // `reviewSample` treats a storage failure as non-fatal so a transient error
+    // cannot cost the worker their verdict — but that leaves the file on disk
+    // until something comes back for it. The sweep is that something.
+    //
+    // The state is reproduced directly rather than by making `ctx.storage`
+    // throw on demand: a decision is recorded, `storageId` is still attached,
+    // and the file genuinely still exists — which is exactly what the catch
+    // block leaves behind.
+    const t = setupTest();
+    const a = await seedAdmin(t);
+    const w = await seedWorker(t);
+    await seedArtisan(t, w.id);
+    const storageId = await seedStorageFile(t);
+    const sampleId = await w.as.mutation(api.workSamples.completeUpload, {
+      storageId,
+      mimeType: "image/png",
+    });
+
+    const now = Date.now();
+    await t.run(async (ctx) => {
+      const row = await ctx.db.get(sampleId as never);
+      await ctx.db.patch(row!._id, {
+        status: "approved",
+        reviewedAt: now,
+        reviewedBy: a.id as never,
+        reviewNote: "Clear evidence of finished work",
+      });
+    });
+    const stranded = must(await t.run((ctx) => ctx.db.get(sampleId)), "sample");
+    expect(stranded.storageId).toBe(storageId);
+    expect(stranded.imagePurgedAt).toBeUndefined();
+
+    const result = await a.as.mutation(api.workSamples.sweepUnpurgedImages, {});
+    expect(result).toEqual({ swept: 1, failed: 0 });
+
+    const swept = must(await t.run((ctx) => ctx.db.get(sampleId)), "sample");
+    expect(swept.storageId).toBeUndefined();
+    expect(swept.imagePurgedAt).toBeTypeOf("number");
+    expect(await t.run((ctx) => ctx.db.system.get(storageId))).toBeNull();
+    // The verdict is untouched by the sweep — it is the record, not the file.
+    expect(swept.status).toBe("approved");
+    expect(swept.reviewNote).toBe("Clear evidence of finished work");
+  });
+
+  it("sweeps a stranded REJECTED sample as well", async () => {
+    const t = setupTest();
+    const a = await seedAdmin(t);
+    const w = await seedWorker(t);
+    await seedArtisan(t, w.id);
+    const storageId = await seedStorageFile(t);
+    const sampleId = await w.as.mutation(api.workSamples.completeUpload, {
+      storageId,
+      mimeType: "image/png",
+    });
+    await t.run(async (ctx) => {
+      const row = await ctx.db.get(sampleId as never);
+      await ctx.db.patch(row!._id, {
+        status: "rejected",
+        reviewedAt: Date.now(),
+        reviewedBy: a.id as never,
+      });
+    });
+
+    expect(await a.as.mutation(api.workSamples.sweepUnpurgedImages, {})).toEqual({
+      swept: 1,
+      failed: 0,
+    });
+    expect(await t.run((ctx) => ctx.db.system.get(storageId))).toBeNull();
+  });
+
+  it("never sweeps a PENDING sample, and refuses a non-officer", async () => {
+    const t = setupTest();
+    const a = await seedAdmin(t);
+    const w = await seedWorker(t);
+    await seedArtisan(t, w.id);
+    const storageId = await seedStorageFile(t);
+    await w.as.mutation(api.workSamples.completeUpload, {
+      storageId,
+      mimeType: "image/png",
+    });
+
+    const result = await a.as.mutation(api.workSamples.sweepUnpurgedImages, {});
+    expect(result).toEqual({ swept: 0, failed: 0 });
+    expect(await t.run((ctx) => ctx.db.system.get(storageId))).not.toBeNull();
+
+    await expect(
+      w.as.mutation(api.workSamples.sweepUnpurgedImages, {}),
+    ).rejects.toThrow("Forbidden");
+    await expect(
+      t.mutation(api.workSamples.sweepUnpurgedImages, {}),
+    ).rejects.toThrow("Not authenticated");
   });
 
   it("a released sample cannot be deleted, and its empty row is inert", async () => {
