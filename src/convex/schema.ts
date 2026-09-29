@@ -169,12 +169,9 @@ const schema = defineSchema(
       workerVpa: v.optional(v.string()), // worker's own UPI id — funds go straight to them
       acceptedAt: v.optional(v.number()),
       utr: v.optional(v.string()), // UPI transaction reference
-      // Razorpay order + how the booking got paid. `paymentMethod` keeps the
-      // ledger honest: a UTR the customer typed is not the same kind of fact as
-      // a gateway signature verification, and the welfare accrual below treats
-      // them differently.
-      rpOrderId: v.optional(v.string()),
-      paymentMethod: v.optional(v.string()), // "gateway" | "upi_manual"
+      // How the booking got paid. `paymentMethod` keeps the ledger honest:
+      // direct UPI with a customer-submitted reference is the one rail.
+      paymentMethod: v.optional(v.string()), // always "upi_manual"
       paidAt: v.optional(v.number()),
       settledAt: v.optional(v.number()),
       cancelledAt: v.optional(v.number()),
@@ -185,10 +182,7 @@ const schema = defineSchema(
       .index("by_worker", ["workerUserId"])
       .index("by_status", ["status"])
       .index("by_created", ["createdAt"])
-      .index("by_group", ["groupId"])
-      // Razorpay's webhook does not always carry the booking id through, so
-      // the order id we stored is the reliable join key back to the booking.
-      .index("by_rp_order", ["rpOrderId"]),
+      .index("by_group", ["groupId"]),
 
     // Shared ("group") bookings — the cooperative cost-split. Several nearby
     // households agree on one visit for one service in one window, and the

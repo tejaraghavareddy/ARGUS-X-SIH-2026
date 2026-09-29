@@ -66,9 +66,8 @@ enforced in the data model and the server, not in the copy:
 - **Group bookings** — several nearby households agree on one visit and split
   the cost. The worker does one job instead of three, and is still paid the
   full price.
-- Book, then pay either by **direct UPI to the worker's own VPA** (zero
-  commission, the default) or through **Razorpay Checkout** for households who
-  need a gateway receipt.
+- Book, then pay by **direct UPI to the worker's own VPA** (zero
+  commission, the default) and confirm with the UPI transaction reference.
 - **Live GPS radar** tracking the worker en route, with ETA.
 - **Safety Mode** — show only fully verified workers, and keep the exact
   address hidden until the worker sets off.
@@ -121,7 +120,7 @@ enforced in the data model and the server, not in the copy:
 | Charts | Recharts |
 | Backend & database | Convex (reactive queries, mutations, actions) |
 | Auth | Convex Auth — email OTP, SMS OTP, anonymous, two demo providers |
-| Payments | Razorpay Checkout + webhook, direct UPI |
+| Payments | Direct UPI (worker's own VPA) with UTR confirmation |
 | AI | Google Gemini (`@google/genai`) |
 | Weather | Open-Meteo (keyless) |
 | SMS | Vonage Messages API |
@@ -139,22 +138,18 @@ Runtimes are used deliberately, because Convex has two:
 - **V8 runtime** (default) — queries, mutations, and anything calling
   `crypto.subtle`.
 - **Node runtime** (`"use node"`) — actions that need `axios` or a Node API:
-  Razorpay, Gemini, Open-Meteo, and the SMS sender.
+  Gemini, Open-Meteo, and the SMS sender.
 
 One consequence worth knowing: **`httpAction` runs in V8 and cannot import from
-a `"use node"` module.** That is why the Razorpay webhook receiver lives in its
-own file (`paymentsWebhook.ts`) rather than inside `payments.ts`.
+a `"use node"` module.** HTTP endpoints stay thin, and anything they call lives
+in the default runtime.
 
 ### Trust boundaries
 
-- **Money is server-side only.** The key secret is read exclusively in the node
-  runtime; the browser callback is trusted only after the HMAC of
-  `${order_id}|${payment_id}` verifies. A typed UTR is recorded as
-  `upi_manual`, a verified gateway payment as `gateway` — the ledger treats
-  those differently, and `NEXT_STATUS` does not let a worker skip payment.
-- **Settlement is idempotent.** `internal.bookings.markGatewayPaid` means a
-  replayed webhook and the browser callback racing each other cannot pay a
-  worker twice.
+- **Money is server-side only.** Payment completion is the customer submitting
+  the UPI transaction reference (UTR) at the payment stage, recorded as
+  `upi_manual` in the ledger — and `NEXT_STATUS` does not let a worker skip
+  the payment step.
 - **Federation scoping is enforced in the data layer**, not in the UI, with
   dedicated isolation tests.
 - **Every phone and email identifier is hashed** before it becomes a
@@ -190,7 +185,6 @@ modules (`src/lib/geo.test.ts`).
 | `src/lib/i18n.tsx` | Five-language dictionary + provider |
 | `src/convex/identity.ts` | Role checks, federation scoping |
 | `src/convex/rateLimit.ts` | Fixed-window per-subject limiter |
-| `src/convex/payments.ts` | Razorpay order creation and checkout verification (node) |
 
 ## Data model
 
@@ -250,16 +244,10 @@ Sign-in methods degrade honestly rather than erroring opaquely: the worker
 screen queries `authConfig.delivery` and disables a method that cannot be
 delivered, with a plain-language notice.
 
-### Required for payments
+### Payment credentials
 
-| Variable | Used by |
-| --- | --- |
-| `RAZORPAY_KEY_ID` | `payments.ts` (node) |
-| `RAZORPAY_KEY_SECRET` | `payments.ts` (node) |
-| `RAZORPAY_WEBHOOK_SECRET` | `paymentsWebhook.ts` (V8) |
-
-Until these are set, the UI falls back to the manual UPI QR + UTR flow, which
-is the cooperative's default rail anyway.
+None required. Payments run over direct UPI to the worker's own VPA — there is
+no gateway account and no API key on this rail.
 
 ### Platform-provided
 
@@ -305,7 +293,7 @@ anything under `src/convex/`, the Convex push must succeed first.
 
 ## Testing
 
-**478 tests across 29 files**, all passing.
+**458 tests across 27 files**, all passing.
 
 | Area | Files |
 | --- | --- |

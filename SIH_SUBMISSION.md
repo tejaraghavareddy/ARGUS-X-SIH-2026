@@ -6,12 +6,12 @@ programmatically against the form's stated limits.
 | Field | Limit | This text | Headroom |
 | --- | --- | --- | --- |
 | Idea Title (recommended) | 100 | 65 | 35 |
-| Idea Description | 50,000 | 19,164 | 30,836 |
-| Abstract / Summary | 10,000 | 2,869 | 7,131 |
+| Idea Description | 50,000 | 18,853 | 31,147 |
+| Abstract / Summary | 10,000 | 2,852 | 7,148 |
 | Idea Template (PDF) | 10 MB file | not generated | — |
 | YouTube Link | optional | left blank | — |
 
-> The description has 31,206 characters of headroom on purpose. If the judging
+> The description has 31,147 characters of headroom on purpose. If the judging
 > guidelines later ask for a longer write-up, there is room to expand the
 > architecture, data-model and future-scope sections without a rewrite.
 
@@ -143,8 +143,8 @@ fails into a dead end.
     is still paid the full visit price, because the cooperative share is taken
     once per visit, not once per participant.
   - Payment by direct UPI to the worker's own VPA — zero commission, the
-    cooperative's default rail — or through a verified Razorpay Checkout flow
-    for households that need a gateway receipt and an invoice.
+    cooperative's default rail — confirmed with the UPI transaction reference
+    at the payment stage, which the worker cannot skip or self-approve.
   - Live GPS radar: the worker's position during the visit, with ETA derived from
     great-circle distance and bearing.
   - Safety Mode: show only fully verified workers, and keep the exact address
@@ -214,7 +214,7 @@ fails into a dead end.
 
   Household: choose trade -> choose service -> choose Safety Mode / group split ->
   see only verified, available workers with transparent price -> book -> pay by UPI
-  or gateway -> track live ETA -> job runs -> settle -> review.
+  and confirm the reference -> track live ETA -> job runs -> settle -> review.
 
   Worker: sign in by OTP -> complete four onboarding gates -> receive credential ->
   go online with availability -> accept job -> navigate -> arrive -> complete ->
@@ -237,27 +237,23 @@ worker's phone in the same tick.
 Runtimes are used deliberately because Convex has two:
   - V8 runtime (default) for queries, mutations and anything calling
     crypto.subtle.
-  - Node runtime ("use node") for actions that need a Node API or axios: Razorpay
-    order creation, Gemini, Open-Meteo, and the Vonage SMS sender.
+  - Node runtime ("use node") for actions that need a Node API or axios: Gemini
+    demand forecasting, Open-Meteo, and the Vonage SMS sender.
 One consequence is worth recording because it shaped the code: httpAction runs in
-V8 and cannot import from a "use node" module, which is why the Razorpay webhook
-receiver lives in its own file rather than inside the payments module.
+V8 and cannot import from a "use node" module, so HTTP endpoints stay thin and
+anything they call lives in the default runtime.
 
 Trust boundaries:
-  - Money is server-side only. The key secret is read exclusively in the node
-    runtime. The browser callback is trusted only after the HMAC of
-    "{order_id}|{payment_id}" verifies. A typed UTR is recorded as upi_manual and
-    a verified gateway payment as gateway, and the ledger treats them differently.
-  - Settlement is idempotent. A replayed webhook and the browser callback racing
-    each other cannot pay a worker twice, because both converge on a single
-    internal markGatewayPaid operation.
+  - Money is server-side only. Payment completion is the customer submitting the
+    UPI transaction reference at the payment stage, recorded as upi_manual, and
+    the worker's own state machine cannot skip or self-approve that step.
   - Federation scoping is enforced in the data layer, not in the UI.
   - Every phone and email identifier is hashed before it becomes a rate-limit key,
     so the limiter is never a second, less-protected copy of the member list.
 
 Stack: TypeScript 5.9 strict, React 19, React Router 7, Vite 7, Bun, Tailwind
 CSS v4, shadcn/ui on Radix primitives, Framer Motion, Leaflet / react-leaflet,
-Recharts, Convex, Convex Auth, Razorpay Checkout and webhooks, Google Gemini via
+Recharts, Convex, Convex Auth, Google Gemini via
 @google/genai, Open-Meteo, Vonage Messages API, qrcode.react. Tests with Vitest,
 convex-test, Testing Library and jsdom.
 
@@ -372,7 +368,7 @@ sign-in, onboarding, booking, dispatch, payment, settlement, welfare and
 governance paths are implemented and connected to a live backend, across all
 sixteen routed screens and four distinct role portals.
 
-Correctness is enforced by a test suite of 478 automated tests across 29 files,
+Correctness is enforced by a test suite of 458 automated tests across 27 files,
 all passing, and the suite is written to fail for the right reason. It covers
 federation isolation between societies, payment signature and HMAC
 verification, the full booking lifecycle, the 90/7/3 split on single and group
@@ -426,8 +422,8 @@ federation admin governs exactly one society, enforced in the query and mutation
 layer and pinned by isolation tests.
 
 Households browse six trades, split one visit's cost across several nearby
-homes, and pay either by direct UPI to the worker's own VPA — zero commission,
-the default rail — or through a verified Razorpay Checkout flow. Safety Mode
+homes, and pay by direct UPI to the worker's own VPA — zero commission,
+the default rail — confirmed with the UPI transaction reference. Safety Mode
 shows only fully verified workers and keeps the exact address hidden until the
 worker sets off. Live GPS radar tracks the worker en route with a
 distance-and-bearing ETA, and the location layer rejects implausible fixes rather
@@ -445,8 +441,8 @@ the model is unavailable. The interface ships in five Indian languages with
 voice-first affordances for low-literacy users.
 
 Built as a strict-TypeScript React 19 and Convex full-stack application with
-Razorpay, Gemini, Vonage SMS and Leaflet mapping, and backed by 478 passing
-automated tests across 29 files covering isolation, payments, lifecycle,
+Gemini, Vonage SMS and Leaflet mapping, and backed by 458 passing
+automated tests across 27 files covering isolation, payments, lifecycle,
 governance, sign-in and geospatial safety.
 ```
 
@@ -460,7 +456,7 @@ The field is single-select. The available options are:
 
 | Option | Verdict |
 | --- | --- |
-| **Coding and Programming** | **Correct.** The deliverable is software: React 19, strict TypeScript, Convex, 16 screens, 4 role portals, 478 tests |
+| **Coding and Programming** | **Correct.** The deliverable is software: React 19, strict TypeScript, Convex, 16 screens, 4 role portals, 458 tests |
 | AI/ML, Cloud Computing, Blockchain | Wrong. Gemini demand forecasting is one feature and Convex is the hosting substrate, not the contribution. This bucket invites a judge to evaluate an ML contribution, and the honest answer is that forecasting is a bolt-on |
 | Big Data Analysis | No — no warehouse, no pipelines, no dataset analysis |
 | Information Security | No — the security work is real but supporting, not the idea |
@@ -508,8 +504,8 @@ argument is a slide that costs you attention.
 | 7 | Worker journey | SMS OTP → four-gate onboarding (profile, KYC, voice quiz, setup) → credential `SSC-YYYY-XXXX` → go online → accept → settle | Shows the operational reality, not a wishlist |
 | 8 | Household journey | Six trades, transparent price, **group cost-sharing**, direct UPI to the worker's VPA (zero commission), **Safety Mode**, live GPS radar, double-blind disputes | The features a household actually feels |
 | 9 | Architecture | Convex as single source of truth, reactive queries, V8 vs node runtimes, the `httpAction` constraint, federation scoping in the data layer | Shows you built it, not designed it |
-| 10 | Trust, safety and scope | Razorpay HMAC + idempotent settlement, per-subject hashed rate limits, GPS plausibility rejection, append-only audit log, 14 tables, 90/7/3 | Pre-empts "how do you know this is safe" |
-| 11 | Status and evidence | Live prototype, 16 screens, 4 role portals, **478 tests / 29 files, all passing**, five languages, voice-first | Proof it runs |
+| 10 | Trust, safety and scope | Per-subject hashed rate limits, customer-submitted UTR payment gate the worker cannot self-approve, GPS plausibility rejection, append-only audit log, 14 tables, 90/7/3 | Pre-empts "how do you know this is safe" |
+| 11 | Status and evidence | Live prototype, 16 screens, 4 role portals, **458 tests / 27 files, all passing**, five languages, voice-first | Proof it runs |
 | 12 | Scope and close | Cooperative-to-cooperative federated commerce, credit against the welfare ledger, NOSC-mapped skills; close on: "the person who benefits most from a good week is the worker" | Ends on the thesis, not on thanks |
 
 ### 5c. If your PPT is a different shape

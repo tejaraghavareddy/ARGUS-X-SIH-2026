@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router";
-import { useMutation, useQuery, useAction } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { SAFETY_WITHHELD_ADDRESS } from "@/convex/bookings";
 import { useAuth } from "@/hooks/use-auth";
@@ -36,13 +36,6 @@ const FLOW = [
   "settled",
 ];
 
-/** Razorpay Checkout, loaded from Razorpay's CDN in index.html. */
-declare global {
-  interface Window {
-    Razorpay?: new (options: Record<string, unknown>) => { open: () => void };
-  }
-}
-
 const STATUS_TONE: Record<string, "neutral" | "ok" | "warn" | "saffron"> = {
   pending: "warn",
   accepted: "saffron",
@@ -66,11 +59,6 @@ export default function BookingDetail() {
   const advance = useMutation(api.bookings.advance);
   const confirmUtr = useMutation(api.bookings.confirmUtr);
   const cancelBooking = useMutation(api.bookings.cancel);
-  // Gateway checkout — enabled only when the deployment has Razorpay keys;
-  // otherwise the UI falls back to the manual UPI QR + UTR flow.
-  const gateway = useQuery(api.bookings.gatewayStatus);
-  const createGatewayOrder = useAction(api.payments.createOrder);
-  const verifyAndPay = useAction(api.payments.verifyAndPay);
   const raiseDispute = useMutation(api.disputes.raise);
   const requestSwap = useMutation(api.bookings.requestSwap);
   const releaseForSwap = useMutation(api.bookings.releaseForSwap);
@@ -98,8 +86,6 @@ export default function BookingDetail() {
   const [chat, setChat] = useState("");
   const [busy, setBusy] = useState(false);
   const [paid, setPaid] = useState(false);
-  const [gatewayBusy, setGatewayBusy] = useState(false);
-  const [gatewayError, setGatewayError] = useState<string | null>(null);
   const [showFlag, setShowFlag] = useState(false);
   const [flagCategory, setFlagCategory] = useState("quality");
   const [flagDetails, setFlagDetails] = useState("");
@@ -164,9 +150,6 @@ export default function BookingDetail() {
   )}&am=${booking.total}&tn=${encodeURIComponent(
     `Booking_${booking._id.slice(-8)}`,
   )}&cu=INR`;
-  // The gateway button is available whenever the deployment has keys and the
-  // job is at the payment stage — the customer chooses rails, not the admin.
-  const gatewayReady = gateway?.enabled && booking.status === "payment" && !paid && !booking.utr;
   const awaitingUtr =
     booking.status === "payment" && !paid && booking.utr === undefined;
 
@@ -195,66 +178,6 @@ export default function BookingDetail() {
       // surfaced via Convex error toast
     } finally {
       setBusy(false);
-    }
-  }
-
-  /**
-   * Gateway checkout: create the order server-side (the amount comes from the
-   * booking record, not the client), open Razorpay Checkout, then verify the
-   * signature and settle idempotently. The webhook backstops this path, so a
-   * dropped browser session can never lose a captured payment.
-   */
-  async function handleGatewayPay() {
-    if (!booking) return;
-    setGatewayBusy(true);
-    setGatewayError(null);
-    try {
-      const { orderId } = await createGatewayOrder({ bookingId: booking._id });
-      if (!window.Razorpay) {
-        throw new Error("Checkout could not load — check your connection");
-      }
-      const rzp = new window.Razorpay({
-        key_id: gateway?.keyId ?? "",
-        order_id: orderId,
-        name: "Sahakar Seva",
-        description: booking.serviceName,
-        prefill: { name: user?.name ?? "", email: user?.email ?? "" },
-        theme: { color: "#059669" },
-        async handler(response: {
-          razorpay_payment_id: string;
-          razorpay_order_id: string;
-          razorpay_signature: string;
-        }) {
-          try {
-            await verifyAndPay({
-              bookingId: booking._id,
-              rpOrderId: response.razorpay_order_id,
-              rpPaymentId: response.razorpay_payment_id,
-              rpSignature: response.razorpay_signature,
-            });
-            setGatewayBusy(false);
-            setPaid(true);
-          } catch (e) {
-            // The webhook backstops this: if the signature check fails here the
-            // capture still lands server-side and settles the booking, so do not
-            // claim failure to the customer — just stop the spinner and let the
-            // booking row update.
-            setGatewayBusy(false);
-            setGatewayError(
-              e instanceof Error
-                ? e.message
-                : "Confirming the payment — this page will update shortly.",
-            );
-          }
-        },
-        modal: {
-          ondismiss: () => setGatewayBusy(false),
-        },
-      });
-      rzp.open();
-    } catch (e) {
-      setGatewayError(e instanceof Error ? e.message : "Payment failed");
-      setGatewayBusy(false);
     }
   }
 
@@ -549,31 +472,6 @@ export default function BookingDetail() {
                   {t("bd_upi_note")}
                 </p>
               </div>
-
-              {booking.status === "payment" && gatewayReady && (
-                <div className="mt-4 space-y-2 border-t border-dashed border-slate-200 pt-4">
-                  <TlButton
-                    className="w-full"
-                    onClick={() => void handleGatewayPay()}
-                    disabled={gatewayBusy}
-                  >
-                    {gatewayBusy ? (
-                      <Loader2 className="size-4 animate-spin" />
-                    ) : (
-                      <BadgeCheck className="size-4" />
-                    )}
-                    {t("bd_gw_pay")} ₹{booking.shareAmount ?? booking.total}
-                  </TlButton>
-                  {gatewayError && (
-                    <p className="text-center text-[11px] font-semibold text-rose-600">
-                      {gatewayError}
-                    </p>
-                  )}
-                  <p className="text-center text-[11px] leading-4 text-slate-500">
-                    {t("bd_gw_note")}
-                  </p>
-                </div>
-              )}
 
               {awaitingUtr && (
                 <div className="mt-4 space-y-2 border-t border-dashed border-slate-200 pt-4">

@@ -2,8 +2,6 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import {
   query,
   mutation,
-  internalMutation,
-  internalQuery,
   QueryCtx,
   MutationCtx,
 } from "./_generated/server";
@@ -106,8 +104,8 @@ export const OPS_RATE = 0.03;
  * job completed without the customer ever paying, which would skip the payment
  * step *and* the 7% welfare accrual in settlePaidBooking — the one thing this
  * federation cannot afford to get wrong. The only way out of "payment" is a
- * verified settlement: confirmUtr (customer submits the UTR) or
- * markGatewayPaid (Razorpay signature).
+ * verified settlement: confirmUtr (the customer submits the UPI transaction
+ * reference).
  */
 const NEXT_STATUS: Record<string, string> = {
   accepted: "enroute",
@@ -511,104 +509,6 @@ export const confirmUtr = mutation({
   },
 });
 
-/* ── Verified payments (gateway) ──
-   * The manual UTR flow trusts the customer's own report of a payment; a
-   * gateway verifies it instead. All Convex-side bookkeeping for the gateway
-   * lives here so the HTTP webhook (see payments.ts) stays a thin
-   * signature-check plus one call into this module, and the state machine that
-   * turns money into "completed" exists exactly once.
-   */
-
-  /**
-   * Idempotent settlement used by both the Razorpay checkout handler and the
-   * webhook. Verifies the caller knows the order id (the webhook gets it from
-   * the signed payload; checkout gets it from the order we created), then:
-   *  - refuses a wrong order id (the order id is a single-use capability
-   *    binding a payment to exactly this booking),
-   *  - refuses a payment that arrived before the worker marked the work done,
-   *  - no-ops when the booking is already paid through the gateway,
-   *  - and on first application completes the booking and accrues welfare.
-   */
-  export const markGatewayPaid = internalMutation({
-    args: {
-      bookingId: v.id("bookings"),
-      rpOrderId: v.string(),
-      rpPaymentId: v.string(),
-    },
-    handler: async (ctx, args) => {
-      const b = await ctx.db.get(args.bookingId);
-      if (!b) throw new Error("Booking not found");
-      if (b.rpOrderId !== args.rpOrderId) {
-        throw new Error("Payment does not match this booking");
-      }
-      if (b.paidAt && b.paymentMethod === "gateway") return { applied: false };
-      if (b.status !== "payment") {
-        throw new Error("Not awaiting payment");
-      }
-      await ctx.db.patch(b._id, {
-        status: "completed",
-        paidAt: Date.now(),
-        paymentMethod: "gateway",
-        utr: args.rpPaymentId,
-      });
-      await settlePaidBooking(ctx, b._id);
-      return { applied: true };
-    },
-  });
-
-  /**
-   * Record the gateway order on the booking right before checkout opens.
-   * Authorised by the same `canSeeBooking` rule as every other
-   * read/write of a booking; the customer is the only one with a reason to
-   * call it.
-   */
-  /**
- * Find the booking a gateway order belongs to.
- *
- * Razorpay copies an order's `notes` onto the payment entity, but not on every
- * event shape, so the webhook cannot always read the booking id straight out of
- * the payload. The order id we stored on the booking is the reliable join key.
- */
-export const findByGatewayOrder = internalQuery({
-  args: { rpOrderId: v.string() },
-  handler: async (ctx, args) => {
-    const b = await ctx.db
-      .query("bookings")
-      .withIndex("by_rp_order", (q) => q.eq("rpOrderId", args.rpOrderId))
-      .unique();
-    return b?._id ?? null;
-  },
-});  export const attachGatewayOrder = mutation({
-    args: { id: v.id("bookings"), rpOrderId: v.string() },
-    handler: async (ctx, args) => {
-      const userId = await requireUser(ctx);
-      // Reaching here means a real order exists on the payment provider, so
-      // the budget is spent before the row is touched.
-      await consume(ctx, "payment", userId);
-      const b = await ctx.db.get(args.id);
-      if (!b) throw new Error("Booking not found");
-      if (!(await canSeeBooking(ctx, userId, b))) {
-        throw new Error("Not allowed");
-      }
-      await ctx.db.patch(b._id, { rpOrderId: args.rpOrderId });
-    },
-  });
-
-  /**
-   * What the checkout button needs: whether a gateway is configured and its
-   * public key id. Only the key id is public by design; the key secret never
-   * leaves the node runtime in payments.ts.
-   */
-  export const gatewayStatus = query({
-    args: {},
-    handler: async () => {
-      return {
-        enabled: gatewayEnabled(),
-        keyId: gatewayKeyId(),
-      };
-    },
-  });
-
 /* ── Swap Service ──
  * "Your worker isn't available? We'll find another."
  *
@@ -861,28 +761,4 @@ export const cancel = mutation({
   },
 });
 
-/* ── Gateway configuration ──
- * Server-only reads of the deployment environment. They live here, not in
- * payments.ts, because queries (gatewayStatus) run in the default V8 runtime
- * and cannot import from a "use node" module.
- *
- * The Razorpay key id is public by design (it is what checkout embeds); the
- * key secret is only ever read inside payments.ts. Until the user sets these
- * in the Keys tab, the whole gateway flow degrades to the manual UPI flow.
- */
 
-/** True when the deployment has Razorpay keys configured. */
-export function gatewayEnabled(): boolean {
-  return Boolean(
-    process.env.RAZORPAY_KEY_ID &&
-      process.env.RAZORPAY_KEY_SECRET &&
-      process.env.RAZORPAY_WEBHOOK_SECRET,
-  );
-}
-
-/** Public Razorpay key id, or undefined when not configured. */
-export function gatewayKeyId(): string | undefined {
-  const keyId = process.env.RAZORPAY_KEY_ID;
-  if (!keyId || !process.env.RAZORPAY_KEY_SECRET) return undefined;
-  return keyId;
-}

@@ -165,9 +165,6 @@ function effectiveKeys(lang: "en" | "hi" | "te" | "ta" | "bn"): Set<string> {
   if (lang === "ta") for (const k of exportedKeys("i18n.skill.ts", "SKILL_TA")) keys.add(k);
   if (lang === "bn") for (const k of exportedKeys("i18n.skill.ts", "SKILL_BN")) keys.add(k);
   if (lang === "ta") for (const k of exportedKeys("i18n.profile.ts", "PROFILE_TA")) keys.add(k);
-  if (lang === "te") for (const k of exportedKeys("i18n.gateway.ts", "GATEWAY_TE")) keys.add(k);
-  if (lang === "ta") for (const k of exportedKeys("i18n.gateway.ts", "GATEWAY_TA")) keys.add(k);
-  if (lang === "bn") for (const k of exportedKeys("i18n.gateway.ts", "GATEWAY_BN")) keys.add(k);
   if (lang === "hi") for (const k of Object.keys(SUPERADMIN_HI)) keys.add(k);
   if (lang === "te") for (const k of Object.keys(SUPERADMIN_TE)) keys.add(k);
   if (lang === "ta") for (const k of Object.keys(SUPERADMIN_TA)) keys.add(k);
@@ -225,9 +222,6 @@ describe("i18n dictionary integrity", () => {
       ...exportedKeys("i18n.skill.ts", "SKILL_TA"),
       ...exportedKeys("i18n.skill.ts", "SKILL_BN"),
       ...exportedKeys("i18n.profile.ts", "PROFILE_TA"),
-      ...exportedKeys("i18n.gateway.ts", "GATEWAY_TE"),
-      ...exportedKeys("i18n.gateway.ts", "GATEWAY_TA"),
-      ...exportedKeys("i18n.gateway.ts", "GATEWAY_BN"),
       ...Object.keys(SUPERADMIN_HI),
       ...Object.keys(SUPERADMIN_TE),
       ...Object.keys(SUPERADMIN_TA),
@@ -242,7 +236,7 @@ describe("i18n dictionary integrity", () => {
     expect(orphans, `Unused side-module keys:\n${orphans.join("\n")}`).toEqual([]);
   });
 
-  it("has no unused English keys outside the retired gateway block", () => {
+  it("has no unused English keys", () => {
     const orphans = [...en].filter((k) => !isUsed(k) && !isRetired(k)).sort();
     expect(orphans, `English keys nothing renders:\n${orphans.join(", ")}`).toEqual([]);
   });

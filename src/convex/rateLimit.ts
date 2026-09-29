@@ -48,11 +48,6 @@ export const LIMITS = {
   swap: { max: 5, windowMs: HOUR },
   /** Turning Safety Mode on or off. */
   safety: { max: 10, windowMs: DAY },
-  /** Opening a gateway checkout session. Every one of these creates a real
-   *  order on the payment provider, so it is an outward-facing cost, not just
-   *  a database write: a customer re-clicking "Pay" must not mint a hundred
-   *  unpaid orders. Generous enough for a genuine fumble or two. */
-  payment: { max: 8, windowMs: HOUR },
   /** Running a demand forecast. Admin-gated, but a gate is not a budget: each
    *  run is a billable Gemini call, so without a limit a single officer (or a
    *  script holding one admin token) can drain the cooperative's model
