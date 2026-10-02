@@ -196,42 +196,48 @@ export default function Landing() {
         </motion.div>
       </main>
 
-      {/* ── Cooperative revenue engine band ─────────────────── */}
-      <section aria-label="Cooperative revenue engine" className="border-t border-slate-200 bg-white">
-        <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
-          <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-3">
+      {/* ── Cooperative revenue engine ────────────────────────
+          Continues the card grid above rather than sitting under it as a
+          separate band: same max-w-5xl column, no hard border, and the three
+          shares divided by hairlines so they read as one 90/7/3 statement. */}
+      <section aria-label="Cooperative revenue engine">
+        <div className="mx-auto w-full max-w-5xl px-4 pb-16 sm:pb-20">
+          <dl className="grid grid-cols-1 gap-x-6 gap-y-5 text-left sm:grid-cols-3 sm:divide-x sm:divide-slate-200">
             {/* Welfare share — federation's top preference, listed first */}
-            <div className="flex items-start gap-2.5">
+            <div className="flex items-start gap-2.5 sm:pr-6">
               <HeartPulse className="mt-0.5 size-5 shrink-0 text-emerald-600" />
               <div>
-                <p className="flex items-center gap-1.5 text-lg font-black leading-tight text-emerald-700">
+                <dt className="flex items-center gap-1.5 text-base font-black leading-tight text-emerald-700">
                   7% Dedicated Welfare Pool
-                  <BadgeCheck className="size-4 text-emerald-600" aria-label="Top priority" />
-                </p>
-                <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-emerald-600">
+                  <BadgeCheck
+                    className="size-4 shrink-0 text-emerald-600"
+                    aria-label="Top priority"
+                  />
+                </dt>
+                <dd className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-emerald-600">
                   Top priority — funded before any ops spend
-                </p>
+                </dd>
               </div>
             </div>
-            <div className="flex items-start gap-2.5">
+            <div className="flex items-start gap-2.5 sm:px-6">
               <HandCoins className="mt-0.5 size-5 shrink-0 text-emerald-600" />
-              <p className="text-lg font-black leading-tight text-emerald-700">
+              <dt className="text-base font-black leading-tight text-emerald-700">
                 90% Direct Worker Payout
-              </p>
+              </dt>
             </div>
-            <div className="flex items-start gap-2.5">
+            <div className="flex items-start gap-2.5 sm:pl-6">
               <ShieldCheck className="mt-0.5 size-5 shrink-0 text-slate-400" />
-              <p className="text-lg font-black leading-tight text-slate-500">
+              <dt className="text-base font-black leading-tight text-slate-500">
                 3% Federation Ops
-              </p>
+              </dt>
             </div>
-          </div>
+          </dl>
         </div>
       </section>
 
       {/* ── Footer strip ─────────────────────────────────────── */}
       <footer className="border-t border-slate-200 bg-white">
-        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-center gap-x-3 gap-y-1.5 px-4 py-5 text-center text-[11px] leading-relaxed text-slate-500">
+        <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-center gap-x-3 gap-y-1.5 px-4 py-5 text-center text-[11px] leading-relaxed text-slate-500">
           <div className="flex items-center gap-2">
             <SahMark size="sm" />
             <span className="italic">{t("ld_tagline")}</span>
