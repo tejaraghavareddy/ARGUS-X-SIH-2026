@@ -196,12 +196,14 @@ export default function Landing() {
         </motion.div>
       </main>
 
-      {/* ── Cooperative revenue engine ────────────────────────
-          Continues the card grid above rather than sitting under it as a
-          separate band: same max-w-5xl column, no hard border, and the three
-          shares divided by hairlines so they read as one 90/7/3 statement. */}
-      <section aria-label="Cooperative revenue engine">
-        <div className="mx-auto w-full max-w-5xl px-4 pb-16 sm:pb-20">
+      {/* ── Cooperative close ───────────────────────────────────
+          The 90/7/3 split and the federation's own line of business are one
+          statement, not two sections: the split is the argument, the tagline is
+          the signature underneath it. One max-w-5xl column, one hairline above
+          the mark, and the three shares divided so they read as parts of a
+          whole. */}
+      <footer className="mt-auto">
+        <div className="mx-auto w-full max-w-5xl px-4 pb-10 sm:pb-12">
           <dl className="grid grid-cols-1 gap-x-6 gap-y-5 text-left sm:grid-cols-3 sm:divide-x sm:divide-slate-200">
             {/* Welfare share — federation's top preference, listed first */}
             <div className="flex items-start gap-2.5 sm:pr-6">
@@ -232,22 +234,14 @@ export default function Landing() {
               </dt>
             </div>
           </dl>
-        </div>
-      </section>
 
-      {/* ── Footer strip ─────────────────────────────────────── */}
-      <footer className="border-t border-slate-200 bg-white">
-        <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-center gap-x-3 gap-y-1.5 px-4 py-5 text-center text-[11px] leading-relaxed text-slate-500">
-          <div className="flex items-center gap-2">
-            <SahMark size="sm" />
-            <span className="italic">{t("ld_tagline")}</span>
+          <div className="mt-8 flex flex-col items-center gap-2 border-t border-slate-200 pt-5 text-center text-[11px] leading-relaxed text-slate-500">
+            <div className="flex items-center gap-2">
+              <SahMark size="sm" />
+              <span className="italic">{t("ld_tagline")}</span>
+            </div>
+            <span className="text-slate-400">{t("ld_footer_reg")}</span>
           </div>
-          {/* Rule instead of a gap so the two lines read as one statement. */}
-          <span
-            aria-hidden="true"
-            className="hidden h-3 w-px shrink-0 bg-slate-200 sm:block"
-          />
-          <span className="text-slate-400">{t("ld_footer_reg")}</span>
         </div>
       </footer>
 
