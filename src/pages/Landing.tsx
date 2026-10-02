@@ -231,12 +231,17 @@ export default function Landing() {
 
       {/* ── Footer strip ─────────────────────────────────────── */}
       <footer className="border-t border-slate-200 bg-white">
-        <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-2 px-4 py-4 text-[11px] text-slate-500 sm:flex-row">
+        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-center gap-x-3 gap-y-1.5 px-4 py-5 text-center text-[11px] leading-relaxed text-slate-500">
           <div className="flex items-center gap-2">
             <SahMark size="sm" />
             <span className="italic">{t("ld_tagline")}</span>
           </div>
-          <span className="italic">{t("ld_footer_reg")}</span>
+          {/* Rule instead of a gap so the two lines read as one statement. */}
+          <span
+            aria-hidden="true"
+            className="hidden h-3 w-px shrink-0 bg-slate-200 sm:block"
+          />
+          <span className="text-slate-400">{t("ld_footer_reg")}</span>
         </div>
       </footer>
 
