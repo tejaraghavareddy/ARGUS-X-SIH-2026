@@ -22,6 +22,7 @@ import {
 import { IdCardDialog } from "@/components/IdCardDialog";
 import ForecastCard from "@/components/ForecastCard";
 import WorkListingsPanel from "@/components/WorkListingsPanel";
+import InsuranceClaimPanel from "@/components/InsuranceClaimPanel";
 import {
   Loader2,
   LogOut,
@@ -397,6 +398,12 @@ export default function Dashboard() {
             <div className="lg:col-span-3">
               <WorkListingsPanel />
             </div>
+            {/* Accident cover — the accrued 7% welfare balance and a claim route */}
+            {artisan && (
+              <div className="lg:col-span-3">
+                <InsuranceClaimPanel artisanId={artisan._id} />
+              </div>
+            )}
             {/* Left column */}
             <div className="flex flex-col gap-5">
               {/* Telemetry */}

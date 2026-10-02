@@ -84,12 +84,17 @@ enforced in the data model and the server, not in the copy:
   standard trade or a category you name yourself) for board approval.
 - Welfare and dividend balances, a digital ID card, and a voice-request
   interface for low-literacy users.
+- File an accident claim against a named cover route (PMJJBY, the society
+  welfare pool, or an external insurer) and track its status. The panel leads
+  with the 7% balance actually accrued in the member's own cooperative ledger —
+  not an "insured" badge, because the cooperative is not an underwriter.
 
 ### For federation admins
 - Verify KYC, review work samples, approve or reject worker listings.
 - Approve and register district societies; govern one federation.
 - Review disputes, cancel bookings, manage members, and read an earnings
   ledger scoped to their own society.
+- Adjudicate accident claims, recording where each was forwarded.
 - Every privileged action writes to an append-only `adminAuditLog`.
 
 ### For platform super admins
@@ -203,6 +208,8 @@ modules (`src/lib/geo.test.ts`).
 | `workSamples` | Worker evidence photos, purged after the board rules |
 | `customServices` | Worker-published listings awaiting board approval |
 | `disputes` | Double-blind arbitration |
+| `invoices` | Sequential-numbered receipts, money columns frozen at issue time |
+| `insuranceClaims` | Accident claims against a cover route, with forwarding receipts |
 | `notifications` | Admin-to-worker notices |
 | `adminAuditLog` | Append-only record of every privileged action |
 | `rateLimits` | Per-scope, per-subject fixed windows |
@@ -293,7 +300,7 @@ anything under `src/convex/`, the Convex push must succeed first.
 
 ## Testing
 
-**458 tests across 27 files**, all passing.
+**500 tests across 29 files**, all passing.
 
 | Area | Files |
 | --- | --- |

@@ -22,6 +22,7 @@ import {
 import { QRCodeSVG } from "qrcode.react";
 import CustomerRealtimeRadarMap from "@/components/map/CustomerRealtimeRadarMap";
 import { RevenueSplitBar } from "@/components/RevenueSplit";
+import InvoicePanel from "@/components/InvoicePanel";
 import ReviewForm from "@/components/ReviewForm";
 import RatingStars from "@/components/RatingStars";
 import { Repeat2, Users } from "lucide-react";
@@ -502,6 +503,9 @@ export default function BookingDetail() {
                 </p>
               )}
             </Panel>
+
+            {/* Invoice — the paper record of the payment above */}
+            <InvoicePanel bookingId={booking._id} />
 
             {/* Worker actions */}
             {isWorker && stageKeys[booking.status] && (

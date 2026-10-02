@@ -36,6 +36,14 @@ export const LIMITS = {
   listing: { max: 10, windowMs: HOUR },
   /** Raising a dispute on the same booking. */
   dispute: { max: 5, windowMs: DAY },
+  /** Issuing an invoice. Every issue writes a permanent document into the
+   *  society's register, so a script could otherwise flood a cooperative's
+   *  books with receipts and make the sequential numbering meaningless. */
+  invoice: { max: 5, windowMs: HOUR },
+  /** Filing an accident claim against the welfare cover. Tight for the same
+   *  reason as `emergency`: each claim is a real record that a society officer
+   *  has to adjudicate by hand, and it reads as a bid for a payout. */
+  claim: { max: 3, windowMs: DAY },
   /** Joining or opening a shared ("group") booking. */
   group: { max: 5, windowMs: HOUR },
   /** Emergency Quick Help broadcasts. Deliberately tight: this is the endpoint

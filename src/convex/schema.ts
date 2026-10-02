@@ -385,6 +385,79 @@ const schema = defineSchema(
     })
       .index("by_status", ["status"])
       .index("by_booking", ["bookingId"]),
+
+    // Invoicing — the paper record of a completed job.
+    //
+    // The payment itself moves by UPI straight from customer to artisan and the
+    // federation never custodies the money, but "Digital payments and
+    // invoicing" is one requirement and the invoice is the half that was
+    // missing. It is a receipt the customer can keep and a tax record the
+    // society can file, generated from the booking row so it can never drift
+    // from what was actually paid.
+    //
+    // `number` is a per-federation sequential string rather than a random id,
+    // because an invoice number a customer can quote to the society has to look
+    // like one. `by_number` backs the uniqueness check that enforces it.
+    invoices: defineTable({
+      bookingId: v.id("bookings"),
+      /** Sequential, society-facing: "SS-2026-000042". Unique per federation. */
+      number: v.string(),
+      societyId: v.optional(v.id("societies")),
+      issuedToUserId: v.id("users"),
+      issuedToName: v.optional(v.string()),
+      artisanId: v.optional(v.id("artisans")),
+      serviceName: v.string(),
+      address: v.string(),
+      // The money columns are copied from the booking at issue time rather than
+      // read live. An invoice is a statement about a moment; if the federation
+      // later repriced a service, last month's receipt must not change.
+      base: v.number(),
+      workerShare: v.number(),
+      welfareAmt: v.number(),
+      opsAmt: v.number(),
+      total: v.number(),
+      /** The customer-submitted UPI reference this invoice attests. */
+      utr: v.optional(v.string()),
+      paymentMethod: v.optional(v.string()), // always "upi_manual"
+      paidAt: v.optional(v.number()),
+      issuedAt: v.number(),
+    })
+      .index("by_booking", ["bookingId"])
+      .index("by_number", ["number"])
+      .index("by_customer", ["issuedToUserId"])
+      .index("by_society", ["societyId"]),
+
+    // Worker accident cover — the "insurance integration" half of the welfare
+    // requirement.
+    //
+    // Deliberately NOT a policy-issuance engine. The cooperative is not an
+    // insurer, has no underwriter and collects no premium, and pretending
+    // otherwise is the kind of demo that collapses the moment a judge asks who
+    // carries the risk. What the federation genuinely can do is know which of
+    // its members were on a job and when, and hand the society a verified
+    // incident record for a real insurer or a government scheme (PMJJBY) to act
+    // on. That is a claim, not a policy — and it is the part only a
+    // cooperative is positioned to produce, because it saw both sides of the job.
+    insuranceClaims: defineTable({
+      artisanId: v.id("artisans"),
+      bookingId: v.optional(v.id("bookings")),
+      /** Which cover route this claim is routed to. */
+      scheme: v.string(), // "pmjjby" | "society_pool" | "external"
+      category: v.string(), // accident | injury | property | liability | other
+      description: v.string(),
+      /** rupees the member is claiming; not adjudicated here. */
+      claimedAmount: v.optional(v.number()),
+      status: v.string(), // open | forwarded | settled | rejected
+      /** Set when the society submits it onward — a receipt, not a payout. */
+      forwardedTo: v.optional(v.string()),
+      reference: v.optional(v.string()),
+      raisedBy: v.id("users"),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+      .index("by_artisan", ["artisanId"])
+      .index("by_status", ["status"])
+      .index("by_booking", ["bookingId"]),
   },
   {
     schemaValidation: false,
