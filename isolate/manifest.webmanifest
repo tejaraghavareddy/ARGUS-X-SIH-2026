@@ -1,17 +1,41 @@
 {
-  "name": "freebuff.com application",
-  "short_name": "freebuff.com",
-  "description": "freebuff.com application",
+  "name": "Sahakar Seva — Cooperative Artisan Federation",
+  "short_name": "Sahakar Seva",
+  "description": "Cooperative-owned marketplace for verified skilled workers. Book verified electricians, plumbers, carpenters and more, paid direct by UPI.",
+  "id": "/",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#ffffff",
-  "theme_color": "#000000",
+  "theme_color": "#047857",
+  "lang": "en-IN",
+  "dir": "ltr",
+  "categories": ["business", "productivity", "utilities"],
   "icons": [
     {
-      "src": "/logo.png",
+      "src": "/logo.svg",
       "sizes": "any",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Book a worker",
+      "short_name": "Book",
+      "url": "/services"
+    },
+    {
+      "name": "My bookings",
+      "short_name": "Bookings",
+      "url": "/bookings"
     }
   ]
 }
