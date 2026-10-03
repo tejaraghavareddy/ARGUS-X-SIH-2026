@@ -128,6 +128,7 @@ enforced in the data model and the server, not in the copy:
 | Payments | Direct UPI (worker's own VPA) with UTR confirmation |
 | AI | Google Gemini (`@google/genai`) |
 | Weather | Open-Meteo (keyless) |
+| Email | SendGrid v3 Mail Send |
 | SMS | Vonage Messages API |
 | Tests | Vitest, `convex-test`, Testing Library, jsdom |
 
@@ -242,8 +243,8 @@ Set these in the project's **Keys / API keys** tab. They are never committed.
 
 | Variable | Used by | If missing |
 | --- | --- | --- |
-| `RESEND_API_KEY` | `auth/emailOtp.ts` | Email sign-in fails |
-| `RESEND_FROM_EMAIL` | `auth/emailOtp.ts` | Falls back to Resend's testing sender, which may only deliver to the account holder's own inbox |
+| `SENDGRID_API_KEY` | `auth/emailOtp.ts` | Email sign-in fails |
+| `SENDGRID_FROM_EMAIL` | `auth/emailOtp.ts` | **SendGrid has no sandbox sender.** Every `from` must be verified under Settings → Sender Identity first — an email click, no DNS. Until it is set, email sign-in is reported as undeliverable and the button stays inert |
 | `VONAGE_API_KEY` | `auth/phoneOtp.ts` | SMS sign-in fails |
 | `VONAGE_API_SECRET` | `auth/phoneOtp.ts` | SMS sign-in fails |
 | `VONAGE_SMS_SENDER` | `auth/phoneOtp.ts` | Falls back to `SahakarSeva`; **must be a sender id registered with Vonage** |
@@ -303,7 +304,7 @@ anything under `src/convex/`, the Convex push must succeed first.
 
 ## Testing
 
-**550 tests across 32 files**, all passing.
+**564 tests across 32 files**, all passing.
 
 | Area | Files |
 | --- | --- |
@@ -380,6 +381,12 @@ Stated plainly, because a prototype that hides these is harder to trust:
 - **SMS delivery is untested end-to-end.** Everything up to handing the code
   to Vonage is covered by tests; the live request is not, because no
   credentials were available during development.
+- **Email delivery is likewise untested end-to end**, against the same
+  reasoning. SendGrid additionally requires a verified sender before it will
+  send at all, which is why `authConfig.delivery` treats the key *and* the
+  sender as one credential: a key alone cannot deliver, and reporting the
+  method as available would put a working-looking button in front of a user
+  whose code is guaranteed not to arrive.
 - **Booking-location GPS is client-reported.** Adequate for dispatch, not a
   tamper-evident audit trail. It is tamper-*detectable* — see the plausibility
   work in `src/lib/geo.ts` — but a determined client can still lie.

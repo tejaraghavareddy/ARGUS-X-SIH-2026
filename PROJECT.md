@@ -142,7 +142,7 @@ point, nothing to do with payments) and was deleted along with its regional
 imports.
 
 **Docs are coupled to the test count.** `README.md` and `SIH_SUBMISSION.md` both
-state **550 tests across 32 files**. That's a measured number, not a claim:
+state **564 tests across 32 files**. That's a measured number, not a claim:
 removing `payments.test.ts` (12) and `cryptoHex.test.ts` (8) from 478 is the whole
 delta. If you add or drop a test, both docs go stale.
 
@@ -185,7 +185,7 @@ it's the line a reviewer will push on.
 ```bash
 bunx convex dev --once    # required after editing anything in src/convex/
 bunx tsc -b --noEmit      # frontend typecheck
-bun run test              # 550 tests / 32 files
+bun run test              # 564 tests / 32 files
 bun run lint
 ```
 

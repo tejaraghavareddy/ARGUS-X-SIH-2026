@@ -1,20 +1,23 @@
 /**
- * Worker sign-in: phone number handling, the SMS throttle, and portal routing.
+ * Worker sign-in: phone number handling, the SMS throttle, portal routing, and
+ * the email code delivery that backs the second sign-in tab.
  *
- * These three cover the parts of the worker sign-in flow that can silently do
- * the wrong thing: a number that normalises differently between the send and
- * the verify step locks a worker out of their own account, an unthrottled SMS
- * endpoint bills the cooperative, and a mis-routed redirect drops a worker into
- * the customer portal.
+ * These cover the parts of the worker sign-in flow that can silently do the
+ * wrong thing: a number that normalises differently between the send and the
+ * verify step locks a worker out of their own account, an unthrottled SMS
+ * endpoint bills the cooperative, a mis-routed redirect drops a worker into the
+ * customer portal, and a mail payload in the wrong vendor's shape is accepted
+ * by nothing and reported by nobody.
  */
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   normalisePhone,
   phoneOtp,
   CODE_TTL_MIN,
   describeVonageFailure,
 } from "@/convex/auth/phoneOtp";
-import { PHONE_PROVIDER_ID } from "@/lib/authProviders";
+import { emailOtp, describeSendgridFailure } from "@/convex/auth/emailOtp";
+import { EMAIL_PROVIDER_ID, PHONE_PROVIDER_ID } from "@/lib/authProviders";
 import { signInPathFor, isWorkerPath } from "@/lib/portal";
 import { setupTest, api, must, seedUser } from "./convexHarness";
 
@@ -247,6 +250,196 @@ describe("describeVonageFailure", () => {
     for (const status of [401, 402, 403, 422, 429, 500]) {
       expect(classify(status, "")).not.toContain("9876543210");
       expect(classify(status, "")).toContain("•••••");
+    }
+  });
+});
+
+/**
+ * Email delivery.
+ *
+ * The provider is the same trap as `Phone()` in one respect and the opposite in
+ * another: it must register under the id the screen signs in with, and it must
+ * send in the shape the *live* vendor parses. A payload written for a different
+ * provider is not rejected loudly at the boundary — it is dropped, and the user
+ * simply never receives a code. That is the failure this section pins.
+ */
+describe("email provider wiring", () => {
+  it("is an email-typed provider under the id the screen signs in with", () => {
+    expect(emailOtp.id).toBe(EMAIL_PROVIDER_ID);
+    expect(emailOtp.type).toBe("email");
+  });
+
+  it("gives codes a 15-minute life, matching what the screen promises", () => {
+    expect(emailOtp.maxAge).toBe(60 * 15);
+  });
+});
+
+type SendArgs = { identifier: string; token: string };
+
+/**
+ * `sendVerificationRequest` receives the provider config alongside the request
+ * from Auth.js; the sender tests only care about the first two fields.
+ */
+function sendCode(identifier: string, token: string): Promise<void> {
+  const send = emailOtp.sendVerificationRequest as unknown as (
+    args: SendArgs,
+  ) => Promise<void>;
+  return send({ identifier, token });
+}
+
+/** Capture the single fetch the send performs, and reply with `status`. */
+function captureSend(status = 202): {
+  calls: Array<{ url: string; init: RequestInit }>;
+} {
+  const calls: Array<{ url: string; init: RequestInit }> = [];
+  vi.stubGlobal("fetch", async (url: string, init: RequestInit) => {
+    calls.push({ url, init });
+    return new Response(status === 202 ? "" : '{"errors":[]}', { status });
+  });
+  return { calls };
+}
+
+describe("email send payload", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  it("speaks SendGrid's v3 shape, not the flat to/text one", async () => {
+    // Regression: the payload was written in Resend's shape (top-level `to`,
+    // `text`, `html`). SendGrid reads `personalizations` and `content`, and
+    // answers "The personalizations field is required" — so this is exactly
+    // the vendor error that produced the bare Server Error.
+    vi.stubEnv("SENDGRID_API_KEY", "SG.test-key");
+    vi.stubEnv("SENDGRID_FROM_EMAIL", "no-reply@sahakar.example");
+    const { calls } = captureSend();
+
+    await sendCode("kisan@example.com", "424242");
+
+    expect(calls).toHaveLength(1);
+    const [call] = calls;
+    expect(call.url).toBe("https://api.sendgrid.com/v3/mail/send");
+
+    const headers = call.init.headers as Record<string, string>;
+    expect(headers.Authorization).toBe("Bearer SG.test-key");
+    expect(headers["Content-Type"]).toBe("application/json");
+
+    const body = JSON.parse(String(call.init.body));
+    expect(body.personalizations).toEqual([{ to: [{ email: "kisan@example.com" }] }]);
+    expect(body.from).toEqual({
+      email: "no-reply@sahakar.example",
+      name: "Sahakar Seva",
+    });
+    expect(body.subject).toContain("424242");
+    expect(body.content.map((part: { type: string }) => part.type)).toEqual([
+      "text/plain",
+      "text/html",
+    ]);
+    // The fields SendGrid does not read must be gone, or they read as though
+    // the payload were correct while still delivering to nobody.
+    expect(body).not.toHaveProperty("to");
+    expect(body).not.toHaveProperty("text");
+    expect(body).not.toHaveProperty("html");
+  });
+
+  it("carries the code in both parts of the message", async () => {
+    vi.stubEnv("SENDGRID_API_KEY", "SG.test-key");
+    vi.stubEnv("SENDGRID_FROM_EMAIL", "no-reply@sahakar.example");
+    const { calls } = captureSend();
+
+    await sendCode("kisan@example.com", "424242");
+
+    const body = JSON.parse(String(calls[0].init.body));
+    for (const part of body.content) {
+      expect(part.value).toContain("424242");
+    }
+  });
+
+  it("splits a pasted 'Name <a@b.com>' sender into the two SendGrid fields", async () => {
+    vi.stubEnv("SENDGRID_API_KEY", "SG.test-key");
+    vi.stubEnv("SENDGRID_FROM_EMAIL", "Sahakar Seva <no-reply@sahakar.example>");
+    const { calls } = captureSend();
+
+    await sendCode("kisan@example.com", "424242");
+
+    const body = JSON.parse(String(calls[0].init.body));
+    expect(body.from).toEqual({
+      email: "no-reply@sahakar.example",
+      name: "Sahakar Seva",
+    });
+  });
+
+  it("fails by name when no API key is configured", async () => {
+    // An unset key used to reach the vendor as `Bearer undefined` and come back
+    // as an opaque 401 that read like bad credentials rather than a missing one.
+    vi.stubEnv("SENDGRID_API_KEY", "");
+    vi.stubEnv("SENDGRID_FROM_EMAIL", "no-reply@sahakar.example");
+    captureSend();
+
+    await expect(sendCode("kisan@example.com", "424242")).rejects.toThrow(
+      /SENDGRID_API_KEY is not set/,
+    );
+  });
+
+  it("turns a refusal into a named error instead of a bare status", async () => {
+    vi.stubEnv("SENDGRID_API_KEY", "SG.test-key");
+    vi.stubEnv("SENDGRID_FROM_EMAIL", "no-reply@sahakar.example");
+    captureSend(403);
+
+    await expect(sendCode("kisan@example.com", "424242")).rejects.toThrow(/403/);
+  });
+});
+
+/**
+ * Email failure classification — the mirror of the SMS section above, and the
+ * only thing standing between a refused send and a bare
+ * `[CONVEX A(auth:signIn)] Server Error`.
+ */
+describe("describeSendgridFailure", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  const who = "kisan.sahakar@example.com";
+  const classify = (status: number, detail: string) =>
+    describeSendgridFailure(status, detail, who);
+
+  it("names bad credentials on 401", () => {
+    expect(classify(401, "")).toMatch(/Restricted Access, with Mail Send/);
+  });
+
+  it("blames the sender identity on 403, which is the usual cause", () => {
+    vi.stubEnv("SENDGRID_FROM_EMAIL", "no-reply@sahakar.example");
+    expect(classify(403, "")).toMatch(/has not verified/);
+  });
+
+  it("tells an unconfigured sender apart from an unverified one", () => {
+    // The two 403s need different advice: one is "go and verify something",
+    // the other is "the thing you verified is not this". Conflating them sends
+    // a developer to re-verify an address that is already verified.
+    vi.stubEnv("SENDGRID_FROM_EMAIL", "");
+    expect(classify(403, "")).toMatch(/SENDGRID_FROM_EMAIL is not set/);
+  });
+
+  it("reports throttling as throttling, not as a sender problem", () => {
+    // 429 must never read as "fix your sender identity" — it is a daily quota,
+    // and the two have opposite remedies.
+    vi.stubEnv("SENDGRID_FROM_EMAIL", "");
+    expect(classify(429, "")).toMatch(/100 messages a day/);
+    expect(classify(429, "")).not.toMatch(/Sender Identity/);
+  });
+
+  it("names a spam rejection on 413", () => {
+    expect(classify(413, "")).toMatch(/spam/i);
+  });
+
+  it("falls back to the raw detail for an unrecognised failure", () => {
+    expect(classify(500, "boom")).toMatch(/Email delivery failed.*boom/);
+  });
+
+  it("never leaks a full address into the message", () => {
+    for (const status of [401, 403, 413, 429, 500]) {
+      expect(classify(status, "")).not.toContain(who);
     }
   });
 });

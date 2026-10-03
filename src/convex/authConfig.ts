@@ -9,7 +9,7 @@ import { query } from "./_generated/server";
  * `[CONVEX A(auth:signIn)] Server Error` — an opaque failure with no idea
  * what went wrong, on a screen whose only option was the one that failed.
  *
- * Email is delivered by Resend (see ./auth/emailOtp.ts) and SMS by Vonage.
+ * Email is delivered by SendGrid (see ./auth/emailOtp.ts) and SMS by Vonage.
  * Both providers also fail if the key is present but wrong — that surfaces as
  * a non-2xx from the vendor, not as a false here — so this reports whether a
  * send is *attemptable*, never whether it succeeded.
@@ -22,7 +22,13 @@ export const delivery = query({
   args: {},
   handler: async () => {
     return {
-      emailOtp: Boolean(process.env.RESEND_API_KEY),
+      // Both halves are required: unlike most vendors, SendGrid has no sandbox
+      // sender, so a key alone can never deliver — it would be a 403 on every
+      // send. Reporting "available" here is what puts a working button in front
+      // of a user whose code is guaranteed not to arrive.
+      emailOtp: Boolean(
+        process.env.SENDGRID_API_KEY && process.env.SENDGRID_FROM_EMAIL,
+      ),
       phoneOtp: Boolean(
         process.env.VONAGE_API_KEY && process.env.VONAGE_API_SECRET,
       ),
