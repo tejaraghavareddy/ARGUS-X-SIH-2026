@@ -211,6 +211,39 @@ describe("auth pages", () => {
     expect((phoneTab as HTMLButtonElement).disabled).toBe(true);
   });
 
+  // Regression: the customer screens used to render the email-otp form with no
+  // delivery check at all, so a deployment without EMAIL_OTP_API_KEY showed a
+  // working-looking form whose only action threw — surfacing as a bare
+  // "[CONVEX A(auth:signIn)] Server Error" the visitor could not interpret.
+  it.each([
+    ["customer sign-in", <CustomerAuth />, "/login/customer"],
+    ["the /auth gateway screen", <Auth />, "/auth"],
+  ])("disables the code form on %s when email OTP is unconfigured", (_label, page, route) => {
+    seedCommon();
+    queryResults.set("authConfig:delivery", { emailOtp: false, phoneOtp: false });
+    renderPage(page, { route });
+    const email = document.querySelector('input[name="email"]') as HTMLInputElement | null;
+    expect(email).not.toBeNull();
+    expect(email!.disabled).toBe(true);
+    const submit = document.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+    expect(submit).not.toBeNull();
+    expect(submit!.disabled).toBe(true);
+    // The reason must be on screen, not just an inert button.
+    expect(document.body.textContent).toMatch(/cannot be sent|not switched on/i);
+    // Guest sign-in still works, so the visitor is not locked out entirely.
+    expect(screen.getAllByRole("button").length).toBeGreaterThan(1);
+  });
+
+  it("keeps the code form enabled when email OTP is configured", () => {
+    seedCommon();
+    queryResults.set("authConfig:delivery", { emailOtp: true, phoneOtp: false });
+    renderPage(<CustomerAuth />, { route: "/login/customer" });
+    const email = document.querySelector('input[name="email"]') as HTMLInputElement | null;
+    expect(email!.disabled).toBe(false);
+    const submit = document.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+    expect(submit!.disabled).toBe(false);
+  });
+
   it("falls back to email when SMS is the only unconfigured method", () => {
     seedCommon();
     queryResults.set("authConfig:delivery", {

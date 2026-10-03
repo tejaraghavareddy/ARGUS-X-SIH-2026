@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/input-otp";
 import { LanguagePicker } from "@/components/terminal";
 import { useAuth } from "@/hooks/use-auth";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useLang } from "@/lib/i18n";
 import { ArrowRight, HandHeart, Loader2, Mail, UserX } from "lucide-react";
@@ -39,6 +39,17 @@ function resolveRedirectAfterAuth(
 
 function Auth({ redirectAfterAuth }: AuthProps = {}) {
   const { isLoading: authLoading, isAuthenticated, signIn } = useAuth();
+  /**
+   * Whether a sign-in code can actually be delivered on this deployment.
+   *
+   * `sendVerificationRequest` throws when the delivery credential is absent and
+   * that exception propagates out of `auth:signIn`, surfacing as
+   * `[CONVEX A(auth:signIn)] Server Error` — opaque, on the one screen whose
+   * only option was the thing that failed. WorkerAuth already queries this; the
+   * customer screens did not.
+   */
+  const delivery = useQuery(api.authConfig.delivery, {});
+  const emailReady = delivery?.emailOtp !== false;
   const { t } = useLang();
   const requestOtp = useMutation(api.authThrottle.requestOtp);
   const navigate = useNavigate();
@@ -138,7 +149,9 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                   <HandHeart className="size-5" />
                 </div>
                 <CardTitle className="text-xl font-extrabold text-slate-900">{t("auth_title")}</CardTitle>
-                <CardDescription>{t("auth_desc")}</CardDescription>
+                <CardDescription>
+                  {emailReady ? t("auth_desc") : t("auth_code_unavailable")}
+                </CardDescription>
               </CardHeader>
               <form onSubmit={handleEmailSubmit}>
                 <CardContent className="space-y-4">
@@ -149,7 +162,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                       placeholder={t("auth_email_ph")}
                       type="email"
                       className="pl-9"
-                      disabled={isLoading}
+                      disabled={isLoading || !emailReady}
                       required
                     />
                   </div>
@@ -158,7 +171,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                   )}
                 </CardContent>
                 <CardFooter className="flex-col gap-3">
-                  <Button type="submit" className="w-full" disabled={isLoading}>
+                  <Button type="submit" className="w-full" disabled={isLoading || !emailReady}>
                     {isLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />

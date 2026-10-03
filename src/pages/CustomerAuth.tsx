@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/input-otp";
 import { LanguagePicker } from "@/components/terminal";
 import { useAuth } from "@/hooks/use-auth";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useLang } from "@/lib/i18n";
 import {
@@ -37,6 +37,17 @@ function resolveReturnTo(returnTo: string | null, fallback = "/services") {
  */
 function CustomerAuth() {
   const { isLoading: authLoading, isAuthenticated, signIn } = useAuth();
+  /**
+   * Whether a sign-in code can actually be delivered on this deployment.
+   *
+   * `sendVerificationRequest` throws when the delivery credential is absent,
+   * and that exception propagates out of `auth:signIn`, so the client sees
+   * `[CONVEX A(auth:signIn)] Server Error` — opaque, and on a screen whose
+   * only option was the thing that failed. WorkerAuth already queries this;
+   * the customer screens did not, so they offered a method that could not work.
+   */
+  const delivery = useQuery(api.authConfig.delivery, {});
+  const emailReady = delivery?.emailOtp !== false;
   const { t } = useLang();
   const requestOtp = useMutation(api.authThrottle.requestOtp);
   const navigate = useNavigate();
@@ -174,7 +185,9 @@ function CustomerAuth() {
                     Book with an account
                   </h2>
                   <p className="mt-1 text-sm text-slate-500">
-                    Enter your email and we&apos;ll send a one-time code.
+                    {emailReady
+                      ? "Enter your email and we'll send a one-time code."
+                      : t("auth_code_unavailable")}
                   </p>
                 </div>
                 <form onSubmit={handleEmailSubmit}>
@@ -186,7 +199,7 @@ function CustomerAuth() {
                         placeholder={t("auth_email_ph")}
                         type="email"
                         className="pl-9"
-                        disabled={isLoading}
+                        disabled={isLoading || !emailReady}
                         required
                       />
                     </div>
@@ -199,7 +212,7 @@ function CustomerAuth() {
                   <div className="flex flex-col gap-3 px-6 pb-5">
                     <button
                       type="submit"
-                      disabled={isLoading}
+                      disabled={isLoading || !emailReady}
                       className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700 active:scale-95 disabled:opacity-50"
                     >
                       {isLoading ? (

@@ -226,6 +226,8 @@ const en: Dict = {
     "v1 scope: worker onboarding + verified credential. customers, dispatch and payments arrive next.",
   auth_title: "worker sign-in",
   auth_desc: "sign in with your email — a 6-digit code will be sent.",
+  auth_code_unavailable:
+    "Email sign-in codes cannot be sent on this deployment right now. Use a guest account below, or try again later.",
   auth_or: "or",
   auth_guest: "continue as guest",
   auth_email_ph: "name@example.com",
@@ -663,6 +665,8 @@ const hi: Dict = {
     "v1 कार्यक्षेत्र: वर्कर पंजीकरण + सत्यापित प्रमाणपत्र। ग्राहक, डिस्पैच और भुगतान अगले चरण में।",
   auth_title: "वर्कर साइन-इन",
   auth_desc: "अपना ईमेल दर्ज करें — 6 अंकों का कोड भेजा जाएगा।",
+  auth_code_unavailable:
+    "इस समय इस डिप्लॉयमेंट पर ईमेल साइन-इन कोड नहीं भेजे जा सकते। नीचे अतिथि खाता का उपयोग करें, या बाद में कोशिश करें।",
   auth_or: "या",
   auth_guest: "अतिथि के रूप में जारी रखें",
   auth_email_ph: "name@example.com",
@@ -998,6 +1002,8 @@ const te: Dict = { // federation-gateway-i18n
     "v1 పరిధి: వర్కర్ నమోదు + ధృవీకరించిన ధృవపత్రం. కస్టమర్లు, డిస్పాచ్, చెల్లింపులు తర్వాత.",
   auth_title: "వర్కర్ సైన్-ఇన్",
   auth_desc: "మీ ఇమెయిల్ నమోదు చేయండి — 6 అంకెల కోడ్ పంపుతాము.",
+  auth_code_unavailable:
+    "ఈ ప్లాట్‌ఫారమ్‌లో ఇప్పుడు ఇమెయిల్ సైన్-ఇన్ కోడ్‌లు పంపలేము. కింద ఉన్న అతిథి ఖాతాను ఉపయోగించండి లేదా తర్వాత మళ్లీ ప్రయత్నించండి.",
   auth_or: "లేదా",
   auth_guest: "అతిథిగా కొనసాగించండి",
   auth_email_ph: "name@example.com",
@@ -1438,6 +1444,8 @@ const ta: Dict = {
     "v1 நோக்கம்: தொழிலாளி பதிவு + சரிபார்க்கப்பட்ட சான்றிதழ். வாடிக்கையாளர், டிஸ்பாட்ச், பணம் அடுத்து.",
   auth_title: "தொழிலாளி உள்நுழைவு",
   auth_desc: "உங்கள் மின்னஞ்சலை உள்ளிடவும் — 6 இலக்க குறியீடு அனுப்பப்படும்.",
+  auth_code_unavailable:
+    "இந்தப் பதிவில் இப்போது மின்னஞ்சல் சைன்-இன் குறியீடுகளை அனுப்ப முடியாது. கீழே உள்ள விருந்தின் கணக்கைப் பயன்படுத்தவும், அல்லது பின்னர் மீண்டும் முயற்சிக்கவும்.",
   auth_or: "அல்லது",
   auth_guest: "விருந்தினராக தொடரவும்",
   auth_email_ph: "name@example.com",
@@ -1594,6 +1602,8 @@ const bn: Dict = {
     "v1 পরিসর: ওয়ার্কার নিবন্ধন + যাচাইকৃত সনদ। গ্রাহক, ডিসপ্যাচ ও পেমেন্ট পরবর্তীতে।",
   auth_title: "ওয়ার্কার সাইন-ইন",
   auth_desc: "আপনার ইমেল দিন — ৬ সংখ্যার কোড পাঠানো হবে।",
+  auth_code_unavailable:
+    "এই মুহূর্তে এই ডিপ্লয়মেন্টে ইমেল সাইন-ইন কোড পাঠানো যাচ্ছে না। নিচের অতিথি অ্যাকাউন্ট ব্যবহার করুন, অথবা পরে আবার চেষ্টা করুন।",
   auth_or: "অথবা",
   auth_guest: "অতিথি হিসেবে চালিয়ে যান",
   auth_email_ph: "name@example.com",
