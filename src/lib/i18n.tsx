@@ -247,6 +247,7 @@ const en: Dict = {
   wauth_title: "Sign in to work",
   wauth_sub: "Enter your mobile number and we will text you a one-time code.",
   wauth_checking: "Checking which sign-in methods are available…",
+  wauth_sms_offline: "SMS is not available right now — use email to get a code.",
   wauth_tab_phone: "Mobile",
   wauth_tab_email: "Email",
   wauth_phone_ph: "98765 43210",

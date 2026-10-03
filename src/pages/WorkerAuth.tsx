@@ -333,7 +333,7 @@ function WorkerAuth() {
                           autoComplete="tel-national"
                           placeholder={t("wauth_phone_ph")}
                           className="pl-[3.75rem]"
-                          disabled={isLoading || !smsReady}
+                          disabled={isLoading}
                           required
                         />
                       </div>
@@ -342,6 +342,16 @@ function WorkerAuth() {
                       )}
                     </div>
                     <div className="px-6 pb-5">
+                      {/* The FIELD stays typeable even when SMS cannot be
+                          delivered — disabling it made the form look broken and
+                          locked the worker out of a working tab entirely. Only
+                          the send action is gated, which is the part that would
+                          otherwise throw. */}
+                      {!smsReady && (
+                        <p className="mb-2 text-center text-[11px] font-semibold text-amber-700">
+                          {t("wauth_sms_offline")}
+                        </p>
+                      )}
                       <button
                         type="submit"
                         disabled={isLoading || !smsReady}
@@ -372,7 +382,7 @@ function WorkerAuth() {
                           autoComplete="email"
                           placeholder={t("auth_email_ph")}
                           className="pl-9"
-                          disabled={isLoading || !emailReady}
+                          disabled={isLoading}
                           required
                         />
                       </div>

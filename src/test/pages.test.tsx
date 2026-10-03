@@ -209,11 +209,11 @@ describe("auth pages", () => {
     renderPage(<WorkerAuth />, { route: "/login/worker" });
     const phoneTab = screen.getByRole("button", { name: /mobile/i });
     expect((phoneTab as HTMLButtonElement).disabled).toBe(true);
-    // The phone form is inert end to end: the tab, the field and the submit.
-    // A disabled tab alone still left a worker able to type a number into a
-    // live input and press the only enabled button.
+    // The SEND action is what throws, so that is what is gated. A disabled tab
+    // alone still let a worker press an enabled send button; a disabled INPUT
+    // went too far and made the whole screen look broken.
     const phone = document.querySelector('input[name="phone"]') as HTMLInputElement | null;
-    if (phone) expect(phone.disabled).toBe(true);
+    if (phone) expect(phone.disabled).toBe(false);
     const submit = document.querySelector('button[type="submit"]') as HTMLButtonElement | null;
     expect(submit).not.toBeNull();
     expect(submit!.disabled).toBe(true);
@@ -226,13 +226,18 @@ describe("auth pages", () => {
   it.each([
     ["customer sign-in", <CustomerAuth />, "/login/customer"],
     ["the /auth gateway screen", <Auth />, "/auth"],
-  ])("disables the code form on %s when email OTP is unconfigured", (_label, page, route) => {
+  ])("disables sending a code on %s when email OTP is unconfigured", (_label, page, route) => {
     seedCommon();
     queryResults.set("authConfig:delivery", { emailOtp: false, phoneOtp: false });
     renderPage(page, { route });
     const email = document.querySelector('input[name="email"]') as HTMLInputElement | null;
     expect(email).not.toBeNull();
-    expect(email!.disabled).toBe(true);
+    // Typeable — a visitor can still compose an address, and the screen does
+    // not read as broken. Disabling the input locked people out entirely.
+    expect(email!.disabled).toBe(false);
+    fireEvent.change(email!, { target: { value: "a@x.com" } });
+    expect((email as HTMLInputElement).value).toBe("a@x.com");
+    // The SEND action is what would throw, so that is what is gated.
     const submit = document.querySelector('button[type="submit"]') as HTMLButtonElement | null;
     expect(submit).not.toBeNull();
     expect(submit!.disabled).toBe(true);
@@ -291,8 +296,15 @@ describe("auth pages", () => {
     expect(document.body.textContent).toMatch(/checking which sign-in/i);
     const phoneTab = screen.getByRole("button", { name: /mobile/i });
     expect((phoneTab as HTMLButtonElement).disabled).toBe(true);
+    // The FIELD stays typeable: disabling it made the screen look broken and
+    // locked the worker out of a tab they had already chosen. Only the send
+    // action is gated, because that is the part that would throw.
     const phone = document.querySelector('input[name="phone"]') as HTMLInputElement | null;
-    if (phone) expect(phone.disabled).toBe(true);
+    if (phone) {
+      expect(phone.disabled).toBe(false);
+      fireEvent.change(phone, { target: { value: "9876543210" } });
+      expect((phone as HTMLInputElement).value).toBe("9876543210");
+    }
     const submit = document.querySelector('button[type="submit"]') as HTMLButtonElement | null;
     expect(submit).not.toBeNull();
     expect(submit!.disabled).toBe(true);
@@ -303,7 +315,8 @@ describe("auth pages", () => {
     queryResults.delete("authConfig:delivery");
     renderPage(<CustomerAuth />, { route: "/login/customer" });
     const email = document.querySelector('input[name="email"]') as HTMLInputElement | null;
-    expect(email!.disabled).toBe(true);
+    // Typeable, for the same reason as the phone field.
+    expect(email!.disabled).toBe(false);
     const submit = document.querySelector('button[type="submit"]') as HTMLButtonElement | null;
     expect(submit!.disabled).toBe(true);
     // Not the "unavailable" message — the server has not said anything yet.

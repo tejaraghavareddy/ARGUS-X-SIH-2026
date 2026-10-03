@@ -177,7 +177,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                       placeholder={t("auth_email_ph")}
                       type="email"
                       className="pl-9"
-                      disabled={isLoading || !emailReady}
+                      disabled={isLoading}
                       required
                     />
                   </div>
