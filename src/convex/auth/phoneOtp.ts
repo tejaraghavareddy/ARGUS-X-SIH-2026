@@ -50,6 +50,66 @@ function maskPhone(e164: string): string {
   return `••••• ${e164.slice(-5)}`;
 }
 
+/**
+ * Turn a Vonage refusal into something a developer can act on.
+ *
+ * The raw payload alone reads as a blank failure, and Convex renders the
+ * thrown message client-side as a bare `[CONVEX A(auth:signIn)] Server Error`.
+ * Naming the cause turns that into a concrete next step.
+ *
+ * An unregistered sender id and an exhausted trial balance are the two that
+ * bite on a fresh account, and neither is inferable from the status code.
+ */
+export function describeVonageFailure(
+  to: string,
+  status: number,
+  body: string,
+): string {
+  const who = maskPhone(to);
+
+  if (status === 401) {
+    return (
+      `SMS delivery failed for ${who}: Vonage rejected the credentials (401). ` +
+      `Check VONAGE_API_KEY and VONAGE_API_SECRET in the Keys tab.`
+    );
+  }
+  if (status === 402 || /balance/i.test(body)) {
+    return (
+      `SMS delivery failed for ${who}: the Vonage account has no credit (402). ` +
+      `Top up, or use the free trial credit that new accounts start with.`
+    );
+  }
+  // An alphanumeric sender must be registered on the account, so a refusal
+  // here is usually the sender rather than the credentials.
+  if (status === 403 || /sender/i.test(body)) {
+    return (
+      `SMS delivery failed for ${who}: Vonage refused the sender. ` +
+      `VONAGE_SMS_SENDER defaults to "SahakarSeva" — an alphanumeric id must be ` +
+      `registered on the account, so either register it in the Vonage dashboard ` +
+      `or leave VONAGE_SMS_SENDER unset and use a numeric sender.`
+    );
+  }
+  // Throttling is checked before the route branch: they are different
+  // problems, and a rate-limited request must not be reported as an
+  // unroutable number.
+  if (status === 429 || /too many|throttl|rate limit/i.test(body)) {
+    return (
+      `SMS delivery failed for ${who}: Vonage throttled the request (429). ` +
+      `Back off and retry, or raise the account's throughput limit.`
+    );
+  }
+  // 422 is what Vonage returns for an unroutable destination. Trial accounts
+  // frequently have no route to +91.
+  if (status === 422 || /not.*rout|invoice account/i.test(body)) {
+    return (
+      `SMS delivery failed for ${who}: Vonage has no route for Indian numbers ` +
+      `on this account. Trial accounts often cannot reach +91 — enable the ` +
+      `India route in the Vonage dashboard.`
+    );
+  }
+  return `SMS delivery failed for ${who}: ${status} ${body.slice(0, 300)}`;
+}
+
 const base = Phone({
   async sendVerificationRequest({ identifier, token }) {
     const apiKey = process.env.VONAGE_API_KEY;
@@ -81,11 +141,17 @@ const base = Phone({
         },
       );
     } catch (error) {
-      const detail =
-        axios.isAxiosError(error)
-          ? `${error.response?.status ?? ""} ${JSON.stringify(error.response?.data ?? "")}`
-          : String(error);
-      throw new Error(`SMS delivery failed for ${maskPhone(to)}: ${detail}`);
+      // The status is passed separately rather than pasted into a string and
+      // matched with a regex: `detail` begins with the status, so a pattern
+      // like /\s401\b/ can never match it, and an unanchored /\b4(22|29)\b/
+      // happily matches a 429.
+      const status = axios.isAxiosError(error)
+        ? (error.response?.status ?? 0)
+        : 0;
+      const body = axios.isAxiosError(error)
+        ? JSON.stringify(error.response?.data ?? "")
+        : String(error);
+      throw new Error(describeVonageFailure(to, status, body));
     }
   },
 });

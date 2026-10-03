@@ -303,7 +303,7 @@ anything under `src/convex/`, the Convex push must succeed first.
 
 ## Testing
 
-**541 tests across 32 files**, all passing.
+**550 tests across 32 files**, all passing.
 
 | Area | Files |
 | --- | --- |

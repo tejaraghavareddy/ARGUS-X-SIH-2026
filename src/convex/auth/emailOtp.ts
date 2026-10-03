@@ -58,6 +58,60 @@ function maskEmail(address: string): string {
   return `${head}${"•".repeat(Math.max(3, local.length - 2))}@${domain}`;
 }
 
+/**
+ * Turn a Resend refusal into something a developer can act on.
+ *
+ * Without this the thrown message is a raw vendor payload, which Convex then
+ * renders client-side as a bare `[CONVEX A(auth:signIn)] Server Error` — the
+ * one symptom with dozens of causes. Naming the likely cause turns an
+ * unactionable failure into a five-minute fix.
+ *
+ * The unverified-from-address case is by far the most common on a fresh
+ * account, and it is the one a developer cannot infer from a 403.
+ */
+function describeResendFailure(
+  status: number,
+  detail: string,
+  recipient: string,
+): string {
+  const to = maskEmail(recipient);
+  const usingTestSender = !process.env.RESEND_FROM_EMAIL;
+
+  if (status === 401) {
+    return (
+      `Email delivery failed for ${to}: Resend rejected the API key (401). ` +
+      `RESEND_API_KEY is set but not valid — paste a current key from ` +
+      `https://resend.com/api-keys into the Keys tab.`
+    );
+  }
+
+  if (status === 403 || status === 422) {
+    if (usingTestSender) {
+      return (
+        `Email delivery failed for ${to}: Resend refused the sender (${status}). ` +
+        `RESEND_FROM_EMAIL is not set, so this sends as ` +
+        `onboarding@resend.dev, which Resend only allows to the account holder's ` +
+        `own inbox. Either test with your own email address, or verify a domain ` +
+        `in Resend and set RESEND_FROM_EMAIL to a sender on it.`
+      );
+    }
+    return (
+      `Email delivery failed for ${to}: Resend refused the sender (${status}). ` +
+      `RESEND_FROM_EMAIL is set to an address Resend has not verified — check ` +
+      `the domain's DNS records and status in the Resend dashboard.`
+    );
+  }
+
+  if (status === 429) {
+    return (
+      `Email delivery failed for ${to}: Resend rate-limited this account (429). ` +
+      `Free-tier sending is capped per day — wait, or upgrade the plan.`
+    );
+  }
+
+  return `Email delivery failed for ${to}: ${status} ${detail.slice(0, 300)}`;
+}
+
 const base = Email({
   async generateVerificationToken() {
     const random: RandomReader = {
@@ -115,9 +169,7 @@ const base = Email({
     // indistinguishable from "the address is wrong".
     if (!response.ok) {
       const detail = await response.text().catch(() => "");
-      throw new Error(
-        `Email delivery failed for ${maskEmail(email)}: ${response.status} ${detail.slice(0, 300)}`,
-      );
+      throw new Error(describeResendFailure(response.status, detail, email));
     }
   },
 });

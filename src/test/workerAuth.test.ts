@@ -8,7 +8,12 @@
  * the customer portal.
  */
 import { describe, expect, it } from "vitest";
-import { normalisePhone, phoneOtp, CODE_TTL_MIN } from "@/convex/auth/phoneOtp";
+import {
+  normalisePhone,
+  phoneOtp,
+  CODE_TTL_MIN,
+  describeVonageFailure,
+} from "@/convex/auth/phoneOtp";
 import { PHONE_PROVIDER_ID } from "@/lib/authProviders";
 import { signInPathFor, isWorkerPath } from "@/lib/portal";
 import { setupTest, api, must, seedUser } from "./convexHarness";
@@ -181,5 +186,67 @@ describe("portal routing", () => {
     expect(isWorkerPath("/dashboard")).toBe(true);
     expect(isWorkerPath("/services")).toBe(false);
     expect(isWorkerPath("/")).toBe(false);
+  });
+});
+
+/**
+ * SMS failure classification.
+ *
+ * These messages are the only thing standing between a failed OTP send and a
+ * bare `[CONVEX A(auth:signIn)] Server Error`, so a misclassification sends a
+ * developer chasing the wrong problem — telling them to fix DNS when the real
+ * fault is an exhausted balance.
+ *
+ * The status is compared as a number rather than matched out of a string,
+ * because it used to be interpolated first: /\s401\b/ could never match a
+ * string beginning "401 ", and an unanchored /\b4(22|29)\b/ matched 429.
+ */
+describe("describeVonageFailure", () => {
+  const who = "+919876543210";
+  const classify = (status: number, body: string) =>
+    describeVonageFailure(who, status, body);
+
+  it("names bad credentials on 401", () => {
+    expect(classify(401, "")).toMatch(/VONAGE_API_KEY and VONAGE_API_SECRET/);
+  });
+
+  it("names an exhausted balance on 402", () => {
+    expect(classify(402, "")).toMatch(/no credit/i);
+  });
+
+  it("points at the sender on 403, since that is the usual cause", () => {
+    expect(classify(403, "")).toMatch(/VONAGE_SMS_SENDER/);
+  });
+
+  it("recognises a sender refusal reported on a 400", () => {
+    expect(classify(400, '{"error_title":"Invalid sender"}')).toMatch(
+      /VONAGE_SMS_SENDER/,
+    );
+  });
+
+  // The regression that motivated passing the status separately: 429 must not
+  // be reported as an unroutable destination.
+  it("reports throttling as throttling, not as an unroutable number", () => {
+    expect(classify(429, "Concurrent requests")).toMatch(/throttled/i);
+    expect(classify(429, "")).not.toMatch(/no route/i);
+  });
+
+  it("recognises throttling from the body when the status is unhelpful", () => {
+    expect(classify(400, "Too many requests")).toMatch(/throttled/i);
+  });
+
+  it("names the missing India route on 422", () => {
+    expect(classify(422, "")).toMatch(/no route for Indian/i);
+  });
+
+  it("falls back to the raw detail for an unrecognised failure", () => {
+    expect(classify(500, "boom")).toMatch(/SMS delivery failed.*boom/);
+  });
+
+  it("never leaks a full phone number into the message", () => {
+    for (const status of [401, 402, 403, 422, 429, 500]) {
+      expect(classify(status, "")).not.toContain("9876543210");
+      expect(classify(status, "")).toContain("•••••");
+    }
   });
 });
