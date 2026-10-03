@@ -13,7 +13,12 @@ import { useLang } from "@/lib/i18n";
 // and the server providers cannot drift apart. Hard-coding "phone-otp" here
 // once shipped a screen that signed in with a provider Convex Auth had not
 // actually registered.
-import { EMAIL_PROVIDER_ID, PHONE_PROVIDER_ID } from "@/lib/authProviders";
+import {
+  EMAIL_PROVIDER_ID,
+  PHONE_PROVIDER_ID,
+  isPlausiblePhone,
+  normalisePhone,
+} from "@/lib/authProviders";
 import {
   ArrowRight,
   BadgeCheck,
@@ -113,10 +118,14 @@ function WorkerAuth() {
    * This is a courtesy to the worker, not a security control — the server
    * re-normalises and re-validates. It exists so a typo does not cost a paid
    * SMS round trip.
+   *
+   * It deliberately calls the SAME normaliser the provider uses. The previous
+   * inline `digits.length === 10` check disagreed with the server on the two
+   * forms Indian workers actually type: "09876543210" (rejected as 11 digits)
+   * and "+91 98765 43210" (rejected). One function, one answer.
    */
   function validPhone(raw: string): boolean {
-    const digits = raw.replace(/\D/g, "");
-    return digits.length === 10;
+    return isPlausiblePhone(raw);
   }
 
   async function handlePhoneSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -129,8 +138,9 @@ function WorkerAuth() {
       return;
     }
     // Normalise before the provider sees it, so the identifier used to request
-    // the code is byte-identical to the one used to verify it.
-    const phone = `+91${entered.replace(/\D/g, "")}`;
+    // the code is byte-identical to the one used to verify it. Convex Auth
+    // compares these strings directly and throws on any mismatch.
+    const phone = normalisePhone(entered);
     setIsLoading(true);
     try {
       await requestPhoneOtp({ phone });

@@ -1,8 +1,16 @@
 import { Phone } from "@convex-dev/auth/providers/Phone";
 // Relative, not the "@/" alias: Convex's own bundler does not resolve the
 // Vite alias, so a specifier that works in the browser fails to deploy here.
-import { PHONE_PROVIDER_ID } from "../../lib/authProviders";
+import {
+  PHONE_PROVIDER_ID,
+  normalisePhone,
+} from "../../lib/authProviders";
 import axios from "axios";
+
+// Re-exported so existing server-side imports (authThrottle, tests) keep
+// working while the implementation lives in the shared module the sign-in
+// screen also imports.
+export { normalisePhone };
 
 /**
  * Phone sign-in for gig workers.
@@ -36,34 +44,6 @@ const MESSAGES_URL = "https://messages.nexmo.com/v1/messages";
 
 /** How long a code stays usable, in minutes. Also stated in the SMS text. */
 export const CODE_TTL_MIN = 10;
-
-/**
- * Normalise a user-typed Indian mobile number to E.164 (+91XXXXXXXXXX).
- *
- * Workers type this every which way — "9876543210", "+91 98765 43210",
- * "09876543210" — and the verification step compares the string against the
- * account id, so a mismatch would lock out a worker who typed their own number
- * correctly. Normalising at the edge is what makes the comparison stable.
- */
-export function normalisePhone(raw: string): string {
-  // Strip the separators people type for legibility.
-  let digits = (raw ?? "").replace(/[\s\-()]/g, "");
-  // A leading "+" means the number is already international.
-  const hasPlus = digits.startsWith("+");
-  digits = digits.replace(/\D/g, "");
-  if (!hasPlus) {
-    // "09876543210" — a leading trunk zero is how Indians write a mobile number
-    // locally; internationally it is dropped.
-    if (digits.length === 11 && digits.startsWith("0")) digits = digits.slice(1);
-    // A bare 10-digit number is assumed Indian, which is the only market this
-    // federation operates in.
-    if (digits.length === 10) return `+91${digits}`;
-  }
-  if (digits.length < 8 || digits.length > 15) {
-    throw new Error("Enter a valid mobile number.");
-  }
-  return `+${digits}`;
-}
 
 /** A short, human-readable form for logs, so a failure never leaks a full number. */
 function maskPhone(e164: string): string {
