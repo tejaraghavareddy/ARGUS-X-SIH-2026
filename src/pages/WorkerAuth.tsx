@@ -257,15 +257,6 @@ function WorkerAuth() {
                   </p>
                 </div>
 
-                {/* SMS is not deliverable on this deployment. Say so plainly
-                    and point at the method that does work, rather than letting
-                    the worker submit a phone number and meet a server error. */}
-                {!smsReady && (
-                  <div className="mx-6 mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs font-semibold text-amber-900">
-                    {t("wauth_sms_unavailable")}
-                  </div>
-                )}
-
                 {/* Method switch */}
                 <div className="mx-6 mt-4 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1">
                   <button
@@ -317,7 +308,7 @@ function WorkerAuth() {
                           autoComplete="tel-national"
                           placeholder={t("wauth_phone_ph")}
                           className="pl-[3.75rem]"
-                          disabled={isLoading}
+                          disabled={isLoading || !smsReady}
                           required
                         />
                       </div>
@@ -328,7 +319,7 @@ function WorkerAuth() {
                     <div className="px-6 pb-5">
                       <button
                         type="submit"
-                        disabled={isLoading}
+                        disabled={isLoading || !smsReady}
                         className="flex w-full items-center justify-center gap-2 rounded-xl bg-teal-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-teal-800 active:scale-95 disabled:opacity-50"
                       >
                         {isLoading ? (
@@ -356,7 +347,7 @@ function WorkerAuth() {
                           autoComplete="email"
                           placeholder={t("auth_email_ph")}
                           className="pl-9"
-                          disabled={isLoading}
+                          disabled={isLoading || !emailReady}
                           required
                         />
                       </div>
@@ -367,7 +358,7 @@ function WorkerAuth() {
                     <div className="px-6 pb-5">
                       <button
                         type="submit"
-                        disabled={isLoading}
+                        disabled={isLoading || !emailReady}
                         className="flex w-full items-center justify-center gap-2 rounded-xl bg-teal-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-teal-800 active:scale-95 disabled:opacity-50"
                       >
                         {isLoading ? (

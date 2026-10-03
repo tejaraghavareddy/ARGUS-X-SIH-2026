@@ -27,8 +27,6 @@ export const WAUTH_HI: Record<string, string> = {
   wauth_benefit_payout: "हर काम का 90% भुगतान सीधे आपके UPI पर",
   wauth_benefit_credential: "आपके ज़िले का भरोसेमंद डिजिटल ट्रेड प्रमाणपत्र",
   wauth_benefit_welfare: "हर निपटान काम पर कल्याण और लाभांश क्रेडिट",
-  wauth_sms_unavailable:
-    "इस संघ में अभी SMS साइन-इन शुरू नहीं हुआ है। अपने ईमेल से साइन-इन करें, या संघ कार्यालय से SMS चालू करवाएँ।",
   wauth_email_sub: "अपना ईमेल डालें और हम आपको एक बार का कोड भेजेंगे।",
 };
 
@@ -54,8 +52,6 @@ export const WAUTH_TE: Record<string, string> = {
   wauth_benefit_payout: "ప్రతి పనికి 90% మీ UPI కి నేరుగా",
   wauth_benefit_credential: "మీ జిల్లా నమ్మే డిజిటల్ ట్రేడ్ సర్టిఫికెట్",
   wauth_benefit_welfare: "ప్రతి సెటిల్ చేసిన పనికి సంఘ లాభాలు",
-  wauth_sms_unavailable:
-    "ఈ సంఘంలో ఇంకా SMS సైన్-ఇన్ ప్రారంభించలేదు. మీ ఇమెయిల్‌తో సైన్-ఇన్ చేయండి లేదా సంఘ కార్యాలయాన్ని సంప్రదించండి.",
   wauth_email_sub: "మీ ఇమెయిల్ ఇవ్వండి, మేము ఒకసారి కోడ్ పంపుతాము.",
 };
 
@@ -81,8 +77,6 @@ export const WAUTH_TA: Record<string, string> = {
   wauth_benefit_payout: "ஒவ்வொரு வேலைக்கும் 90% நேரடியாக உங்கள் UPI க்கு",
   wauth_benefit_credential: "உங்கள் மாவட்டம் நம்பும் டிஜிட்டல் வர்த்தகத் சான்றிதழ்",
   wauth_benefit_welfare: "ஒவ்வொரு நிறைவுற்ற வேலைக்கும் நலத்திட்டம் மற்றும் லாபக் கட்டணம்",
-  wauth_sms_unavailable:
-    "இந்த சங்கத்தில் SMS உள்நுழைவு இன்னும் தொடங்கப்படவில்லை. மின்னஞ்சல் மூலம் உள்நுழியவும் அல்லது சங்க அலுவலகத்தை அணையவும்.",
   wauth_email_sub: "உங்கள் மின்னஞ்சலை உள்ளிடுங்கள், ஒரு குறியீட்டை நாங்கள் அனுப்புவோம்.",
 };
 
@@ -108,7 +102,5 @@ export const WAUTH_BN: Record<string, string> = {
   wauth_benefit_payout: "প্রতিটি কাজের ৯০% সরাসরি আপনার UPI-তে",
   wauth_benefit_credential: "আপনার জেলার বিশ্বস্ত ডিজিটাল ট্রেড সার্টিফিকেট",
   wauth_benefit_welfare: "প্রতিটি সম্পন্ন কাজে কল্যাণ ও লভাংশ ক্রেডিট",
-  wauth_sms_unavailable:
-    "এই সংঘে এখনও এসএমএস সাইন ইন চালু হয়নি। ইমেইল দিয়ে সাইন ইন করুন, অথবা সংঘ কার্যালয়ে জানান।",
   wauth_email_sub: "আপনার ইমেইল দিন, আমরা একবারের কোড পাঠাব।",
 };

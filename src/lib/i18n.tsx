@@ -264,8 +264,6 @@ const en: Dict = {
   wauth_benefit_payout: "90% of every job paid to you, direct to your UPI",
   wauth_benefit_credential: "A digital trade credential your district trusts",
   wauth_benefit_welfare: "Welfare and dividend credits on every settled job",
-  wauth_sms_unavailable:
-    "Text sign-in is not switched on for this federation yet. Use your email to sign in, or ask your federation office to enable SMS.",
   wauth_email_sub: "Enter your email and we will send you a one-time code.",
   secured: "secured by",
   ob_title: "artisan onboarding",

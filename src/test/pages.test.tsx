@@ -199,16 +199,24 @@ describe("auth pages", () => {
     // Regression: with no Vonage credentials the phone provider throws inside
     // sendVerificationRequest, and that surfaces to the worker as a bare
     // "[CONVEX A(auth:signIn)] Server Error" with no way to tell a missing
-    // credential from a bad phone number. The screen must say so up front.
+    // credential from a bad phone number. The phone tab must therefore be
+    // inert — the worker must not be able to submit a number that can only fail.
     seedCommon();
     queryResults.set("authConfig:delivery", {
       emailOtp: false,
       phoneOtp: false,
     });
     renderPage(<WorkerAuth />, { route: "/login/worker" });
-    expect(screen.getByText(/text sign-in is not switched on/i)).toBeTruthy();
     const phoneTab = screen.getByRole("button", { name: /mobile/i });
     expect((phoneTab as HTMLButtonElement).disabled).toBe(true);
+    // The phone form is inert end to end: the tab, the field and the submit.
+    // A disabled tab alone still left a worker able to type a number into a
+    // live input and press the only enabled button.
+    const phone = document.querySelector('input[name="phone"]') as HTMLInputElement | null;
+    if (phone) expect(phone.disabled).toBe(true);
+    const submit = document.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+    expect(submit).not.toBeNull();
+    expect(submit!.disabled).toBe(true);
   });
 
   // Regression: the customer screens used to render the email-otp form with no
@@ -229,7 +237,7 @@ describe("auth pages", () => {
     expect(submit).not.toBeNull();
     expect(submit!.disabled).toBe(true);
     // The reason must be on screen, not just an inert button.
-    expect(document.body.textContent).toMatch(/cannot be sent|not switched on/i);
+    expect(document.body.textContent).toMatch(/cannot be sent/i);
     // Guest sign-in still works, so the visitor is not locked out entirely.
     expect(screen.getAllByRole("button").length).toBeGreaterThan(1);
   });
@@ -264,7 +272,8 @@ describe("auth pages", () => {
     });
     renderPage(<WorkerAuth />, { route: "/login/worker" });
     expect(document.querySelector('input[name="phone"]')).not.toBeNull();
-    expect(screen.queryByText(/text sign-in is not switched on/i)).toBeNull();
+    const phoneTab = screen.getByRole("button", { name: /mobile/i });
+    expect((phoneTab as HTMLButtonElement).disabled).toBe(false);
   });
 
   it("offers email as a second tab on the worker sign-in", () => {
