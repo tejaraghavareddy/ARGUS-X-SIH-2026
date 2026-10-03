@@ -368,7 +368,7 @@ sign-in, onboarding, booking, dispatch, payment, settlement, welfare and
 governance paths are implemented and connected to a live backend, across all
 sixteen routed screens and four distinct role portals.
 
-Correctness is enforced by a test suite of 503 automated tests across 29 files,
+Correctness is enforced by a test suite of 505 automated tests across 29 files,
 all passing, and the suite is written to fail for the right reason. It covers
 federation isolation between societies, payment signature and HMAC
 verification, the full booking lifecycle, the 90/7/3 split on single and group
@@ -441,7 +441,7 @@ the model is unavailable. The interface ships in five Indian languages with
 voice-first affordances for low-literacy users.
 
 Built as a strict-TypeScript React 19 and Convex full-stack application with
-Gemini, Vonage SMS and Leaflet mapping, and backed by 503 passing
+Gemini, Vonage SMS and Leaflet mapping, and backed by 505 passing
 automated tests across 27 files covering isolation, payments, lifecycle,
 governance, sign-in and geospatial safety.
 ```
@@ -456,7 +456,7 @@ The field is single-select. The available options are:
 
 | Option | Verdict |
 | --- | --- |
-| **Coding and Programming** | **Correct.** The deliverable is software: React 19, strict TypeScript, Convex, 16 screens, 4 role portals, 503 tests |
+| **Coding and Programming** | **Correct.** The deliverable is software: React 19, strict TypeScript, Convex, 16 screens, 4 role portals, 505 tests |
 | AI/ML, Cloud Computing, Blockchain | Wrong. Gemini demand forecasting is one feature and Convex is the hosting substrate, not the contribution. This bucket invites a judge to evaluate an ML contribution, and the honest answer is that forecasting is a bolt-on |
 | Big Data Analysis | No — no warehouse, no pipelines, no dataset analysis |
 | Information Security | No — the security work is real but supporting, not the idea |
@@ -505,7 +505,7 @@ argument is a slide that costs you attention.
 | 8 | Household journey | Six trades, transparent price, **group cost-sharing**, direct UPI to the worker's VPA (zero commission), **Safety Mode**, live GPS radar, double-blind disputes | The features a household actually feels |
 | 9 | Architecture | Convex as single source of truth, reactive queries, V8 vs node runtimes, the `httpAction` constraint, federation scoping in the data layer | Shows you built it, not designed it |
 | 10 | Trust, safety and scope | Per-subject hashed rate limits, customer-submitted UTR payment gate the worker cannot self-approve, GPS plausibility rejection, append-only audit log, 14 tables, 90/7/3 | Pre-empts "how do you know this is safe" |
-| 11 | Status and evidence | Live prototype, 16 screens, 4 role portals, **503 tests / 29 files, all passing**, five languages, voice-first | Proof it runs |
+| 11 | Status and evidence | Live prototype, 16 screens, 4 role portals, **505 tests / 29 files, all passing**, five languages, voice-first | Proof it runs |
 | 12 | Scope and close | Cooperative-to-cooperative federated commerce, credit against the welfare ledger, NOSC-mapped skills; close on: "the person who benefits most from a good week is the worker" | Ends on the thesis, not on thanks |
 
 ### 5c. If your PPT is a different shape

@@ -276,8 +276,46 @@ describe("auth pages", () => {
     expect((phoneTab as HTMLButtonElement).disabled).toBe(false);
   });
 
+  // Regression: `delivery?.phoneOtp !== false` reads as safe but is the
+  // opposite. While the query is in flight `delivery` is undefined,
+  // `undefined !== false` is TRUE, so every control was live for that window —
+  // and a worker who typed a number and pressed send first hit the missing
+  // Vonage key and a bare "[CONVEX A(auth:signIn)] Server Error". The screens
+  // must fail CLOSED until the server positively confirms delivery.
+  it("keeps every sign-in control inert while delivery is unknown", () => {
+    seedCommon();
+    // Deliberately NOT seeding authConfig:delivery — this is the in-flight
+    // state, which is exactly when the old code let the worker through.
+    queryResults.delete("authConfig:delivery");
+    renderPage(<WorkerAuth />, { route: "/login/worker" });
+    expect(document.body.textContent).toMatch(/checking which sign-in/i);
+    const phoneTab = screen.getByRole("button", { name: /mobile/i });
+    expect((phoneTab as HTMLButtonElement).disabled).toBe(true);
+    const phone = document.querySelector('input[name="phone"]') as HTMLInputElement | null;
+    if (phone) expect(phone.disabled).toBe(true);
+    const submit = document.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+    expect(submit).not.toBeNull();
+    expect(submit!.disabled).toBe(true);
+  });
+
+  it("keeps the customer form inert while delivery is unknown", () => {
+    seedCommon();
+    queryResults.delete("authConfig:delivery");
+    renderPage(<CustomerAuth />, { route: "/login/customer" });
+    const email = document.querySelector('input[name="email"]') as HTMLInputElement | null;
+    expect(email!.disabled).toBe(true);
+    const submit = document.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+    expect(submit!.disabled).toBe(true);
+    // Not the "unavailable" message — the server has not said anything yet.
+    expect(document.body.textContent).not.toMatch(/cannot be sent/i);
+  });
+
   it("offers email as a second tab on the worker sign-in", () => {
     seedCommon();
+    // The screens fail closed while this query is unknown, so a happy-path test
+    // must declare a deployment that can actually deliver. Implicitly relying on
+    // the old fail-open default would test the race instead of the feature.
+    queryResults.set("authConfig:delivery", { emailOtp: true, phoneOtp: true });
     renderPage(<WorkerAuth />, { route: "/login/worker" });
     const emailTab = screen.getByRole("button", { name: /email/i });
     fireEvent.click(emailTab);
@@ -307,6 +345,7 @@ describe("auth pages", () => {
     // blank code: no SMS was ever sent and the worker could not sign in at
     // all, while the UI looked like it had worked.
     seedCommon();
+    queryResults.set("authConfig:delivery", { emailOtp: true, phoneOtp: true });
     renderPage(<WorkerAuth />, { route: "/login/worker" });
     const phone = document.querySelector(
       'input[name="phone"]',
@@ -326,6 +365,7 @@ describe("auth pages", () => {
 
   it("verifies with the phone number and the code, and nothing else", async () => {
     seedCommon();
+    queryResults.set("authConfig:delivery", { emailOtp: true, phoneOtp: true });
     renderPage(<WorkerAuth />, { route: "/login/worker" });
     const phone = document.querySelector(
       'input[name="phone"]',

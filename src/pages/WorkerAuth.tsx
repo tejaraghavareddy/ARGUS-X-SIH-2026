@@ -65,10 +65,23 @@ function WorkerAuth() {
   // bare "[CONVEX A(auth:signIn)] Server Error" with no way to tell that the
   // problem is a missing credential rather than their phone number.
   const delivery = useQuery(api.authConfig.delivery, {});
-  // While unknown, keep the phone tab — it is the intended default — and only
-  // fall back once the server has said SMS is unavailable.
-  const smsReady = delivery?.phoneOtp !== false;
-  const emailReady = delivery?.emailOtp !== false;
+  /**
+   * Fail CLOSED while the answer is unknown.
+   *
+   * `delivery?.phoneOtp !== false` reads as safe but is the opposite: while the
+   * query is in flight `delivery` is `undefined`, `undefined !== false` is
+   * true, and every control is live for that window. A worker who typed a
+   * number and pressed send before the query settled hit exactly that — the
+   * provider threw on the missing Vonage key and surfaced a bare
+   * `[CONVEX A(auth:signIn)] Server Error`.
+   *
+   * So an unknown answer is treated as "not deliverable": the form is inert
+   * until the server has positively confirmed the credential exists. The cost
+   * is a brief disabled input on first paint; the benefit is that the only way
+   * to submit a phone number is after we know an SMS can actually be sent.
+   */
+  const smsReady = delivery?.phoneOtp === true;
+  const emailReady = delivery?.emailOtp === true;
 
   // The worker's explicit choice, or null while they have not chosen. The
   // effective method is derived rather than stored in an effect: until the
@@ -251,9 +264,11 @@ function WorkerAuth() {
                     {t("wauth_title")}
                   </h2>
                   <p className="mt-1 text-sm text-slate-500">
-                    {method === "phone" && smsReady
-                      ? t("wauth_sub")
-                      : t("wauth_email_sub")}
+                    {delivery === undefined
+                      ? t("wauth_checking")
+                      : method === "phone" && smsReady
+                        ? t("wauth_sub")
+                        : t("wauth_email_sub")}
                   </p>
                 </div>
 

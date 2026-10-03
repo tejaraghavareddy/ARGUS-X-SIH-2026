@@ -47,7 +47,16 @@ function CustomerAuth() {
    * the customer screens did not, so they offered a method that could not work.
    */
   const delivery = useQuery(api.authConfig.delivery, {});
-  const emailReady = delivery?.emailOtp !== false;
+  /**
+   * Fail CLOSED while the answer is unknown.
+   *
+   * `delivery?.emailOtp !== false` looks safe but is the opposite: while the
+   * query is in flight `delivery` is `undefined`, `undefined !== false` is
+   * true, and the form is live for that window. Submitting inside it threw from
+   * the provider and surfaced as `[CONVEX A(auth:signIn)] Server Error`. An
+   * unknown answer is therefore treated as "not deliverable".
+   */
+  const emailReady = delivery?.emailOtp === true;
   const { t } = useLang();
   const requestOtp = useMutation(api.authThrottle.requestOtp);
   const navigate = useNavigate();
@@ -185,9 +194,11 @@ function CustomerAuth() {
                     Book with an account
                   </h2>
                   <p className="mt-1 text-sm text-slate-500">
-                    {emailReady
-                      ? "Enter your email and we'll send a one-time code."
-                      : t("auth_code_unavailable")}
+                    {delivery === undefined
+                      ? t("wauth_checking")
+                      : emailReady
+                        ? "Enter your email and we'll send a one-time code."
+                        : t("auth_code_unavailable")}
                   </p>
                 </div>
                 <form onSubmit={handleEmailSubmit}>

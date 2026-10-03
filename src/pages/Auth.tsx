@@ -49,7 +49,17 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
    * customer screens did not.
    */
   const delivery = useQuery(api.authConfig.delivery, {});
-  const emailReady = delivery?.emailOtp !== false;
+  /**
+   * Fail CLOSED while the answer is unknown.
+   *
+   * `delivery?.emailOtp !== false` looks safe but is the opposite: while the
+   * query is in flight `delivery` is `undefined`, `undefined !== false` is
+   * true, and the form is live for that window. Submitting inside it threw from
+   * the provider and surfaced as `[CONVEX A(auth:signIn)] Server Error`. An
+   * unknown answer is therefore treated as "not deliverable", so the only way
+   * to submit an address is after the server confirms a code can be sent.
+   */
+  const emailReady = delivery?.emailOtp === true;
   const { t } = useLang();
   const requestOtp = useMutation(api.authThrottle.requestOtp);
   const navigate = useNavigate();
@@ -150,7 +160,11 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                 </div>
                 <CardTitle className="text-xl font-extrabold text-slate-900">{t("auth_title")}</CardTitle>
                 <CardDescription>
-                  {emailReady ? t("auth_desc") : t("auth_code_unavailable")}
+                  {delivery === undefined
+                    ? t("wauth_checking")
+                    : emailReady
+                      ? t("auth_desc")
+                      : t("auth_code_unavailable")}
                 </CardDescription>
               </CardHeader>
               <form onSubmit={handleEmailSubmit}>
