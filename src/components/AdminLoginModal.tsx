@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { EMAIL_PROVIDER_ID } from "@/lib/authProviders";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2, LockKeyhole, ShieldCheck, X } from "lucide-react";
 
@@ -42,7 +43,7 @@ export default function AdminLoginModal({ open, onClose, onSuccess }: AdminLogin
       await requestOtp({ email });
       const fd = new FormData();
       fd.set("email", email);
-      await signIn("email-otp", fd);
+      await signIn(EMAIL_PROVIDER_ID, fd);
       setOtpSent(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send the code");
@@ -91,7 +92,7 @@ export default function AdminLoginModal({ open, onClose, onSuccess }: AdminLogin
       const fd = new FormData();
       fd.set("email", email);
       fd.set("code", otp);
-      await signIn("email-otp", fd);
+      await signIn(EMAIL_PROVIDER_ID, fd);
       // Session cleared; the officer-email check happens server-side.
       onSuccess();
     } catch {

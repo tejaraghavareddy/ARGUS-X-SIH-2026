@@ -26,8 +26,21 @@ import { DEMO_ADMIN_EMAILS } from "../identity";
 /** The fixed demo code. Deliberately obvious — it is a demo door. */
 export const DEMO_CODE = "000000";
 
-export const demoAdmin = ConvexCredentials<DataModel>({
-  id: "demo-admin",
+export const DEMO_ADMIN_PROVIDER_ID = "demo-admin";
+
+/**
+ * `ConvexCredentials()` also builds its config from hardcoded literals and
+ * ignores the `id` passed to it:
+ *
+ *   { id: "credentials", type: "credentials", ... }
+ *
+ * So this provider registered as `"credentials"`, while the admin modal calls
+ * `signIn("demo-admin", ...)` — and Convex Auth threw "Provider `demo-admin`
+ * is not configured". The demo officer door did not work. Same trap, same
+ * silent failure, as Email() and Phone(); the id is applied after the factory
+ * runs so this file owns its own contract.
+ */
+const base = ConvexCredentials<DataModel>({
   authorize: async (
     credentials,
     ctx,
@@ -56,3 +69,8 @@ export const demoAdmin = ConvexCredentials<DataModel>({
     return { userId };
   },
 });
+
+export const demoAdmin: typeof base = {
+  ...base,
+  id: DEMO_ADMIN_PROVIDER_ID,
+};

@@ -8,6 +8,7 @@ import { LanguagePicker } from "@/components/terminal";
 import { useAuth } from "@/hooks/use-auth";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { EMAIL_PROVIDER_ID } from "@/lib/authProviders";
 import { useLang } from "@/lib/i18n";
 import {
   ArrowRight,
@@ -82,7 +83,7 @@ function CustomerAuth() {
       // Spend part of the per-address send budget first, so repeated requests
       // cannot be used to mail codes to an arbitrary inbox.
       await requestOtp({ email: String(formData.get("email") ?? "") });
-      await signIn("email-otp", formData);
+      await signIn(EMAIL_PROVIDER_ID, formData);
       setStep({ email: formData.get("email") as string });
     } catch (err) {
       setError(
@@ -101,7 +102,7 @@ function CustomerAuth() {
     setError(null);
     try {
       const formData = new FormData(event.currentTarget);
-      await signIn("email-otp", formData);
+      await signIn(EMAIL_PROVIDER_ID, formData);
       navigate(redirect);
     } catch {
       setError("The verification code you entered is incorrect.");

@@ -220,7 +220,7 @@ describe("auth pages", () => {
   });
 
   // Regression: the customer screens used to render the email-otp form with no
-  // delivery check at all, so a deployment without EMAIL_OTP_API_KEY showed a
+  // delivery check at all, so a deployment without a delivery key showed a
   // working-looking form whose only action threw — surfacing as a bare
   // "[CONVEX A(auth:signIn)] Server Error" the visitor could not interpret.
   it.each([

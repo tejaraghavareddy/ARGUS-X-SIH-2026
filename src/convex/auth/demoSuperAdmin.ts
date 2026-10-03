@@ -14,8 +14,16 @@ import { DEMO_SUPERADMIN_EMAILS } from "../identity";
 /** Fixed demo code for the platform-tier demo account. */
 export const DEMO_SUPER_CODE = "000000";
 
-export const demoSuperAdmin = ConvexCredentials<DataModel>({
-  id: "demo-superadmin",
+export const DEMO_SUPERADMIN_PROVIDER_ID = "demo-superadmin";
+
+/**
+ * `ConvexCredentials()` ignores the `id` passed to it and hardcodes
+ * `"credentials"`, so this provider registered under an id the super-admin
+ * modal never calls — and `signIn("demo-superadmin", ...)` threw "Provider
+ * `demo-superadmin` is not configured". Same silent trap as Email() and
+ * Phone(); see ./demoAdmin.ts for the full note.
+ */
+const base = ConvexCredentials<DataModel>({
   authorize: async (
     credentials,
     ctx,
@@ -36,3 +44,8 @@ export const demoSuperAdmin = ConvexCredentials<DataModel>({
     return { userId };
   },
 });
+
+export const demoSuperAdmin: typeof base = {
+  ...base,
+  id: DEMO_SUPERADMIN_PROVIDER_ID,
+};

@@ -242,14 +242,17 @@ Set these in the project's **Keys / API keys** tab. They are never committed.
 
 | Variable | Used by | If missing |
 | --- | --- | --- |
-| `EMAIL_OTP_API_KEY` | `auth/emailOtp.ts` | Email sign-in fails |
+| `RESEND_API_KEY` | `auth/emailOtp.ts` | Email sign-in fails |
+| `RESEND_FROM_EMAIL` | `auth/emailOtp.ts` | Falls back to Resend's testing sender, which may only deliver to the account holder's own inbox |
 | `VONAGE_API_KEY` | `auth/phoneOtp.ts` | SMS sign-in fails |
 | `VONAGE_API_SECRET` | `auth/phoneOtp.ts` | SMS sign-in fails |
 | `VONAGE_SMS_SENDER` | `auth/phoneOtp.ts` | Falls back to `SahakarSeva`; **must be a sender id registered with Vonage** |
 
-Sign-in methods degrade honestly rather than erroring opaquely: the worker
-screen queries `authConfig.delivery` and disables a method that cannot be
-delivered, with a plain-language notice.
+Sign-in methods degrade honestly rather than erroring opaquely: every screen
+queries `authConfig.delivery` and keeps a method **inert** until the server has
+positively confirmed a delivery credential exists — an unknown answer is
+treated as "not deliverable", so the only way to submit an address is after the
+server says a code can actually be sent.
 
 ### Payment credentials
 
@@ -300,7 +303,7 @@ anything under `src/convex/`, the Convex push must succeed first.
 
 ## Testing
 
-**514 tests across 30 files**, all passing.
+**523 tests across 31 files**, all passing.
 
 | Area | Files |
 | --- | --- |

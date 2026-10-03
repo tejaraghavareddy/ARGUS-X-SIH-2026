@@ -169,7 +169,7 @@ function WorkerAuth() {
       const formData = new FormData(event.currentTarget);
       const email = String(formData.get("email") ?? "").trim();
       await requestOtp({ email });
-      await signIn("email-otp", formData);
+      await signIn(EMAIL_PROVIDER_ID, formData);
       setStep({ kind: "email", to: email });
     } catch (err) {
       setError(
