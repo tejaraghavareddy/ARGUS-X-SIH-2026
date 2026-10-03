@@ -198,7 +198,7 @@ modules (`src/lib/geo.test.ts`).
 | Table | Purpose |
 | --- | --- |
 | `users` | Identity, role, `societyId` scope, safety preference, phone + email |
-| `artisans` | Worker profile, KYC, credential, presence, availability, welfare balance |
+| `artisans` | Worker profile, KYC, credential, presence, availability, welfare balance, optional PAN/GSTIN/SAC for invoicing |
 | `bookings` | The dispatch lifecycle, payment and settlement facts |
 | `bookingGroups` | Cost-shared multi-household visits |
 | `reviews` | One per completed booking, denormalised onto the worker |
@@ -208,7 +208,7 @@ modules (`src/lib/geo.test.ts`).
 | `workSamples` | Worker evidence photos, purged after the board rules |
 | `customServices` | Worker-published listings awaiting board approval |
 | `disputes` | Double-blind arbitration |
-| `invoices` | Sequential-numbered receipts, money columns frozen at issue time |
+| `invoices` | Sequential-numbered receipts; money and seller tax columns frozen at issue time |
 | `insuranceClaims` | Accident claims against a cover route, with forwarding receipts |
 | `notifications` | Admin-to-worker notices |
 | `adminAuditLog` | Append-only record of every privileged action |
@@ -303,7 +303,7 @@ anything under `src/convex/`, the Convex push must succeed first.
 
 ## Testing
 
-**523 tests across 31 files**, all passing.
+**541 tests across 32 files**, all passing.
 
 | Area | Files |
 | --- | --- |

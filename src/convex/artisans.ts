@@ -4,6 +4,7 @@ import { Id } from "./_generated/dataModel";
 import { v } from "convex/values";
 import { OWNER_EMAIL, ensureOwnerRole, requireUser } from "./identity";
 import { SLOT_PARTS, type SlotPart } from "../lib/slots";
+import { isValidPan, isValidGstin, isValidSac } from "./invoices";
 
 /** Federation owner — granted admin role on first verification. */
 export { OWNER_EMAIL };
@@ -344,6 +345,44 @@ export const setSlots = mutation({
       ? (artisan.slots ?? 0) | bit
       : (artisan.slots ?? 0) & ~bit;
     await ctx.db.patch(artisan._id, { slots: next });
+  },
+});
+
+/**
+ * Record the worker's tax identity for invoicing.
+ *
+ * Optional and self-declared: most members are unregistered and never set
+ * these. The formats are checked because a malformed identifier printed on a
+ * receipt is worse than none — it invites a rejection at the counter. Nothing
+ * here is verified against a government registry, and the UI does not claim it
+ * is: it stops typos, not fraud.
+ *
+ * Deliberately separate from onboarding. Tax identity is not an access gate,
+ * so a worker without a PAN can still verify, take jobs and be paid.
+ */
+export const setTaxIdentity = mutation({
+  args: {
+    pan: v.optional(v.string()),
+    gstin: v.optional(v.string()),
+    sacCode: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
+    const artisan = await getMyArtisanInternal(ctx, userId);
+    if (!artisan) throw new Error("Complete onboarding first.");
+
+    // Uppercase and strip spaces: PAN and GSTIN are case-insensitive in the
+    // wild, and a member typing "abcde1234f" should not be told it is invalid.
+    const pan = args.pan?.trim().toUpperCase().replace(/\s/g, "") || undefined;
+    const gstin = args.gstin?.trim().toUpperCase().replace(/\s/g, "") || undefined;
+    const sacCode = args.sacCode?.trim() || undefined;
+
+    if (!isValidPan(pan)) throw new Error("Enter a valid PAN, e.g. ABCDE1234F");
+    if (!isValidGstin(gstin)) throw new Error("Enter a valid 15-character GSTIN");
+    if (!isValidSac(sacCode)) throw new Error("Enter a valid 6-digit SAC code");
+
+    await ctx.db.patch(artisan._id, { pan, gstin, sacCode });
+    return { pan, gstin, sacCode };
   },
 });
 

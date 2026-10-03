@@ -23,6 +23,7 @@ import { IdCardDialog } from "@/components/IdCardDialog";
 import ForecastCard from "@/components/ForecastCard";
 import WorkListingsPanel from "@/components/WorkListingsPanel";
 import InsuranceClaimPanel from "@/components/InsuranceClaimPanel";
+import TaxIdentityPanel from "@/components/TaxIdentityPanel";
 import {
   Loader2,
   LogOut,
@@ -402,6 +403,16 @@ export default function Dashboard() {
             {artisan && (
               <div className="lg:col-span-3">
                 <InsuranceClaimPanel artisanId={artisan._id} />
+              </div>
+            )}
+            {/* Tax identity — printed on the invoices this worker issues */}
+            {artisan && (
+              <div className="lg:col-span-3">
+                <TaxIdentityPanel
+                  pan={artisan.pan}
+                  gstin={artisan.gstin}
+                  sacCode={artisan.sacCode}
+                />
               </div>
             )}
             {/* Left column */}

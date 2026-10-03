@@ -432,6 +432,17 @@ const en: Dict = {
   inv_ops_share: "Federation operations (3%)",
   inv_utr: "UPI reference (UTR)",
   inv_method: "Paid via",
+  inv_seller: "Seller",
+  inv_sac: "SAC code",
+  tax_title: "Tax identity for invoices",
+  tax_invoice_tag: "optional",
+  tax_intro:
+    "Optional. Add these and they appear on every invoice you issue, so a customer can claim the expense. Leave them blank and your invoices still work.",
+  tax_sac: "SAC code (service)",
+  tax_save: "Save tax details",
+  tax_saved: "Saved",
+  tax_not_verified:
+    "Formats are checked as you type. Nothing here is verified against a government registry, and the app never claims it is.",
   inv_print: "Print / save PDF",
   inv_disclaimer:
     "Issued by the artisan cooperative. Payment was made directly to the worker's UPI ID; the cooperative does not hold customer funds.",
@@ -848,6 +859,17 @@ const hi: Dict = {
   inv_utr: "यूपीआई संदर्भ (UTR)",
   inv_method: "भुगतान माध्यम",
   inv_print: "प्रिंट / PDF सहेजें",
+  inv_seller: "विक्रेता",
+  inv_sac: "SAC कोड",
+  tax_title: "चालान के लिए कर पहचान",
+  tax_invoice_tag: "वैकल्पिक",
+  tax_intro:
+    "वैकल्पिक। ये जोड़ें और ये हर चालान पर दिखेंगे, जिससे ग्राहक खर्च का दावा कर सके। खाली छोड़ें तो भी चालान बनते रहेंगे।",
+  tax_sac: "SAC कोड (सेवा)",
+  tax_save: "कर विवरण सहेजें",
+  tax_saved: "सहेजा गया",
+  tax_not_verified:
+    "टाइप करते ही प्रारूप जाँचा जाता है। यहाँ कुछ भी सरकारी रजिस्ट्री से सत्यापित नहीं होता, और ऐप दावा भी नहीं करता।",
   inv_disclaimer:
     "कारीगर सहकारी द्वारा जारी। भुगतान सीधे कारीगर के यूपीआई आईडी पर हुआ; सहकार ग्राहकों का धन नहीं रखता।",
   ins_title: "दुर्घटना बीमा और कल्याण",
@@ -1185,6 +1207,17 @@ const te: Dict = { // federation-gateway-i18n
   inv_utr: "UPI సూచన (UTR)",
   inv_method: "చెల్లింపు మార్గం",
   inv_print: "ముద్రించండి / PDF సేవ్ చేయండి",
+  inv_seller: "విక్రేత",
+  inv_sac: "SAC కోడ్",
+  tax_title: "ఇన్వాయిస్ కోసం పన్ను గుర్తింపు",
+  tax_invoice_tag: "ఐచ్ఛికం",
+  tax_intro:
+    "ఐచ్ఛికం. ఇవి జోడిస్తే మీరు ఇచ్చే ప్రతి ఇన్వాయిస్‌లో కనిపిస్తాయి, తద్వారా కస్టమర్ ఖర్చు క్లేయ్ చేయగలరు. ఖాళీగా వదిలేస్తే ఇన్వాయిస్‌లు పనిచేస్తాయి.",
+  tax_sac: "SAC కోడ్ (సేవ)",
+  tax_save: "పన్ను వివరాలు సేవ్ చేయండి",
+  tax_saved: "సేవ్ అయ్యింది",
+  tax_not_verified:
+    "టైప్ చేస్తేనే ఫార్మాట్ తనిఖీ చేస్తారు. ఇక్కడ ఏదీ ప్రభుత్వ రిజిస్ట్రీతో ధృవీకరించబడదు, యాప్ దానిని ప్రకటించదు.",
   inv_disclaimer:
     "కార్టీగర్ సహకార సంఘం జారీచేసింది. చెల్లింపు కార్టీగర్ UPI ఐడికే నేరుగా జరిగింది; సహకార వినియోగదారుల డబ్బు నిల్వ చేయదు.",
   ins_title: "ప్రమాద బీమా & సంక్షేమం",
@@ -1367,6 +1400,17 @@ const ta: Dict = {
   inv_utr: "UPI குறிப்பு (UTR)",
   inv_method: "கட்டண முறை",
   inv_print: "அச்சிடு / PDF சேமி",
+  inv_seller: "விற்பனையாளர்",
+  inv_sac: "SAC குறியீடு",
+  tax_title: "இன்வாய்ஸுக்கான வரி அடையாளம்",
+  tax_invoice_tag: "விருப்பம்",
+  tax_intro:
+    "விருப்பம். இவற்றைச் சேர்த்தால் நீங்கள் வழங்கும் ஒவ்வொரு இன்வாய்யிலும் தோன்றும், இதனால் வாடிக்கையாளர் செலவைக் கோரிக்க முடியும். காலியாக விட்டால் இன்வாய்ஸ்கள் இயங்கும்.",
+  tax_sac: "SAC குறியீடு (சேவை)",
+  tax_save: "வரி விவரங்களைச் சேமி",
+  tax_saved: "சேமிக்கப்பட்டது",
+  tax_not_verified:
+    "தட்டச்சு செய்யும்போதே வடிவம் சரிபார்க்கப்படும். இங்கு எதுவும் அரசு பதிவேட்டில் சரிபார்க்கப்படுவதில்லை, செயலி அதைக் கூறவும் மாட்டாது.",
   inv_disclaimer:
     "கைவினைஞர் கூட்டுறவால் வழங்கப்படுகிறது. கட்டணம் நேரடியாக கைவினைஞரின் UPI ID-க்கு சென்றது; கூட்டுறவு வாடிக்கையாளர் பணத்தை வைத்திருக்காது.",
   ins_title: "விபத்து காப்புறவு & நலம்",

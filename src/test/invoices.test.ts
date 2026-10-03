@@ -8,6 +8,7 @@ import {
   seedCustomer,
   seedWorker,
   setupTest,
+  type Id,
 } from "./convexHarness";
 
 /**
@@ -264,5 +265,86 @@ describe("invoices:ledgerTotals", () => {
       "invoice",
     );
     expect(inv.workerShare + inv.welfareAmt + inv.opsAmt).toBe(inv.total);
+  });
+});
+
+/**
+ * Seller tax identity.
+ *
+ * The rule that matters: an invoice for an unregistered worker is still valid.
+ * Making a PAN a precondition would exclude exactly the members a labour
+ * cooperative exists to serve — so absence is normal, and only a *malformed*
+ * identifier is refused, because printing a wrong GSTIN invites a rejection at
+ * the counter.
+ */
+describe("invoices: seller tax identity", () => {
+  /** A paid booking assigned to `artisan`. */
+  async function setup(
+    t: ReturnType<typeof setupTest>,
+    customer: Id<"users">,
+    artisan: Id<"artisans">,
+    workerUser: Id<"users">,
+  ) {
+    return await seedBooking(t, customer, {
+      status: "completed",
+      utr: "UTR555666777",
+      paymentMethod: "upi_manual",
+      workerId: artisan,
+      workerUserId: workerUser,
+    });
+  }
+
+  it("copies the worker's PAN, GSTIN and SAC code onto the receipt", async () => {
+    const t = setupTest();
+    const c = await seedCustomer(t);
+    const w = await seedWorker(t, { email: "w@x.com" });
+    const art = await seedArtisan(t, w.id, {
+      fullName: "Asha Rao",
+      pan: "ABCDE1234F",
+      gstin: "29ABCDE1234F1Z5",
+      sacCode: "998311",
+    });
+    const b = await setup(t, c.id, art, w.id);
+    const id = await c.as.mutation(api.invoices.issue, { bookingId: b });
+    const inv = must(await t.run((ctx) => ctx.db.get(id)), "invoice");
+    expect(inv.artisanName).toBe("Asha Rao");
+    expect(inv.pan).toBe("ABCDE1234F");
+    expect(inv.gstin).toBe("29ABCDE1234F1Z5");
+    expect(inv.sacCode).toBe("998311");
+  });
+
+  it("issues normally for a worker with no tax identity at all", async () => {
+    const t = setupTest();
+    const c = await seedCustomer(t);
+    const w = await seedWorker(t, { email: "w@x.com" });
+    const art = await seedArtisan(t, w.id);
+    const b = await setup(t, c.id, art, w.id);
+    const id = await c.as.mutation(api.invoices.issue, { bookingId: b });
+    const inv = must(await t.run((ctx) => ctx.db.get(id)), "invoice");
+    expect(inv.pan).toBeUndefined();
+    expect(inv.gstin).toBeUndefined();
+    expect(inv.sacCode).toBeUndefined();
+  });
+
+  it("refuses a malformed PAN rather than printing it", async () => {
+    const t = setupTest();
+    const c = await seedCustomer(t);
+    const w = await seedWorker(t, { email: "w@x.com" });
+    const art = await seedArtisan(t, w.id, { pan: "NOTAPAN" });
+    const b = await setup(t, c.id, art, w.id);
+    await expect(
+      c.as.mutation(api.invoices.issue, { bookingId: b }),
+    ).rejects.toThrow("PAN is not a valid format");
+  });
+
+  it("refuses a malformed GSTIN", async () => {
+    const t = setupTest();
+    const c = await seedCustomer(t);
+    const w = await seedWorker(t, { email: "w@x.com" });
+    const art = await seedArtisan(t, w.id, { gstin: "123" });
+    const b = await setup(t, c.id, art, w.id);
+    await expect(
+      c.as.mutation(api.invoices.issue, { bookingId: b }),
+    ).rejects.toThrow("GSTIN is not a valid format");
   });
 });

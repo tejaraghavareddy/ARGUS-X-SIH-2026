@@ -100,6 +100,38 @@ export default function InvoicePanel({
           </p>
         </div>
 
+        {/* Seller identity. Only rendered when the worker actually supplied
+            one — an "unregistered seller" line reads better than a row of
+            blanks, and printing empty GSTIN fields invites a rejection. */}
+        {(invoice.pan || invoice.gstin || invoice.sacCode) && (
+          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 rounded-xl bg-slate-50 p-3 font-mono text-[10px] text-slate-600">
+            {invoice.artisanName && (
+              <>
+                <dt className="font-semibold">{t("inv_seller")}</dt>
+                <dd>{invoice.artisanName}</dd>
+              </>
+            )}
+            {invoice.pan && (
+              <>
+                <dt className="font-semibold">PAN</dt>
+                <dd>{invoice.pan}</dd>
+              </>
+            )}
+            {invoice.gstin && (
+              <>
+                <dt className="font-semibold">GSTIN</dt>
+                <dd>{invoice.gstin}</dd>
+              </>
+            )}
+            {invoice.sacCode && (
+              <>
+                <dt className="font-semibold">{t("inv_sac")}</dt>
+                <dd>{invoice.sacCode}</dd>
+              </>
+            )}
+          </dl>
+        )}
+
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="font-bold text-slate-800">{invoice.serviceName}</p>

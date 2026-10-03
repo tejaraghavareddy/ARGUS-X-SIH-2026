@@ -71,6 +71,19 @@ const schema = defineSchema(
       experienceYears: v.number(),
       dailyRate: v.number(), // union standard base day rate (INR)
       upiVpa: v.optional(v.string()), // zero-commission direct settlement VPA
+      // Tax identity of the seller, printed on the invoice.
+      //
+      // A worker running a sole proprietorship bills under their own PAN, so
+      // this lives on the artisan rather than the society — the person who did
+      // the work is the person the invoice is addressed from. All optional:
+      // most members are unregistered and supply nothing, and an absent PAN
+      // must not block an invoice being issued.
+      pan: v.optional(v.string()), // e.g. ABCDE1234F
+      gstin: v.optional(v.string()), // 15-char GST registration, if registered
+      // HSN/SAC code for the supplied service. SAC (Services Accounting Code)
+      // is the correct scheme here, not HSN, which classifies goods — the
+      // distinction a tax officer would actually check.
+      sacCode: v.optional(v.string()), // e.g. 998311
 
       // STEP 2 — Identity & police clearance (KYC)
       idType: v.string(), // "aadhaar" | "voter"
@@ -406,6 +419,15 @@ const schema = defineSchema(
       issuedToUserId: v.id("users"),
       issuedToName: v.optional(v.string()),
       artisanId: v.optional(v.id("artisans")),
+      /** The seller's name on the receipt — the worker who did the job. */
+      artisanName: v.optional(v.string()),
+      // Tax identity, copied from the artisan at issue time for the same
+      // reason the money columns are: an invoice is a statement about a
+      // moment, so a later correction to a PAN must not rewrite a receipt the
+      // customer already filed with their accountant.
+      pan: v.optional(v.string()),
+      gstin: v.optional(v.string()),
+      sacCode: v.optional(v.string()),
       serviceName: v.string(),
       address: v.string(),
       // The money columns are copied from the booking at issue time rather than

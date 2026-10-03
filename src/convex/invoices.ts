@@ -35,6 +35,36 @@ import { v } from "convex/values";
 const INVOICABLE = new Set(["completed", "settled"]);
 
 /**
+ * Indian tax identifiers, validated rather than stored blind.
+ *
+ * A GSTIN printed in the wrong shape on a receipt is worse than no GSTIN: it
+ * invites a rejection at the counter and undermines the document's credibility.
+ * These checks are structural only — they cannot tell you whether a number was
+ * genuinely issued — so they stop typos, not fraud.
+ */
+
+/** PAN: 5 letters, 4 digits, 1 letter. e.g. ABCDE1234F */
+const PAN_RE = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+
+/** GSTIN: 15 characters, the first 2 being the state code, last 1 a checksum. */
+const GSTIN_RE = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
+
+/** SAC codes are 6 digits under the Services Accounting Code scheme. */
+const SAC_RE = /^[0-9]{6}$/;
+
+export function isValidPan(v: string | undefined): boolean {
+  return v === undefined || v === "" || PAN_RE.test(v);
+}
+
+export function isValidGstin(v: string | undefined): boolean {
+  return v === undefined || v === "" || GSTIN_RE.test(v);
+}
+
+export function isValidSac(v: string | undefined): boolean {
+  return v === undefined || v === "" || SAC_RE.test(v);
+}
+
+/**
  * Mint the next sequential invoice number for a society.
  *
  * Counts the existing invoices rather than keeping a counter row, so the
@@ -110,6 +140,23 @@ export const issue = mutation({
     const now = new Date();
     const number = await nextInvoiceNumber(ctx, societyId, now.getFullYear());
 
+    // Tax identity comes off the worker — the person the receipt is issued
+    // from. Validated here rather than trusted, so a malformed identifier can
+    // never reach a printed document. Absent is fine: an unregistered worker
+    // still gets an invoice, just an unregistered-seller one.
+    const artisan = booking.workerId
+      ? await ctx.db.get(booking.workerId)
+      : null;
+    if (artisan && !isValidPan(artisan.pan)) {
+      throw new Error("The worker's PAN is not a valid format — correct it first");
+    }
+    if (artisan && !isValidGstin(artisan.gstin)) {
+      throw new Error("The worker's GSTIN is not a valid format — correct it first");
+    }
+    if (artisan && !isValidSac(artisan.sacCode)) {
+      throw new Error("The worker's SAC code is not a valid format — correct it first");
+    }
+
     return await ctx.db.insert("invoices", {
       bookingId: booking._id,
       number,
@@ -117,6 +164,10 @@ export const issue = mutation({
       issuedToUserId: booking.customerId,
       issuedToName: customer?.name ?? undefined,
       artisanId: booking.workerId,
+      artisanName: artisan?.fullName ?? undefined,
+      pan: artisan?.pan || undefined,
+      gstin: artisan?.gstin || undefined,
+      sacCode: artisan?.sacCode || undefined,
       serviceName: booking.serviceName,
       address: booking.address,
       base: booking.base,
