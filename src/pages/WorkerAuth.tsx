@@ -282,7 +282,11 @@ function WorkerAuth() {
                   </p>
                 </div>
 
-                {/* Method switch */}
+                {/* Method switch.
+                    Tabs are ALWAYS selectable. Disabling one made the form behind
+                    it unreachable, so a worker who wanted SMS could not even see
+                    the screen that explains why it was unavailable. Delivery is
+                    gated at the send button instead — the only step that throws. */}
                 <div className="mx-6 mt-4 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1">
                   <button
                     type="button"
@@ -290,8 +294,7 @@ function WorkerAuth() {
                       setChoice("phone");
                       setError(null);
                     }}
-                    disabled={!smsReady}
-                    className={`flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                    className={`flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition ${
                       method === "phone"
                         ? "bg-white text-teal-900 shadow-sm"
                         : "text-slate-500 hover:text-slate-700"
@@ -299,6 +302,12 @@ function WorkerAuth() {
                   >
                     <Smartphone className="size-3.5" />
                     {t("wauth_tab_phone")}
+                    {!smsReady && (
+                      <span
+                        aria-hidden="true"
+                        className="size-1.5 rounded-full bg-amber-500"
+                      />
+                    )}
                   </button>
                   <button
                     type="button"
@@ -306,8 +315,7 @@ function WorkerAuth() {
                       setChoice("email");
                       setError(null);
                     }}
-                    disabled={!emailReady}
-                    className={`flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                    className={`flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition ${
                       method === "email"
                         ? "bg-white text-teal-900 shadow-sm"
                         : "text-slate-500 hover:text-slate-700"
@@ -315,6 +323,12 @@ function WorkerAuth() {
                   >
                     <Mail className="size-3.5" />
                     {t("wauth_tab_email")}
+                    {!emailReady && (
+                      <span
+                        aria-hidden="true"
+                        className="size-1.5 rounded-full bg-amber-500"
+                      />
+                    )}
                   </button>
                 </div>
 
@@ -391,6 +405,11 @@ function WorkerAuth() {
                       )}
                     </div>
                     <div className="px-6 pb-5">
+                      {!emailReady && (
+                        <p className="mb-2 text-center text-[11px] font-semibold text-amber-700">
+                          {t("auth_code_unavailable")}
+                        </p>
+                      )}
                       <button
                         type="submit"
                         disabled={isLoading || !emailReady}

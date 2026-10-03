@@ -208,10 +208,10 @@ describe("auth pages", () => {
     });
     renderPage(<WorkerAuth />, { route: "/login/worker" });
     const phoneTab = screen.getByRole("button", { name: /mobile/i });
-    expect((phoneTab as HTMLButtonElement).disabled).toBe(true);
-    // The SEND action is what throws, so that is what is gated. A disabled tab
-    // alone still let a worker press an enabled send button; a disabled INPUT
-    // went too far and made the whole screen look broken.
+    // The tab stays selectable: a disabled tab made the form behind it
+    // unreachable, so a worker could not even read why SMS was unavailable.
+    expect((phoneTab as HTMLButtonElement).disabled).toBe(false);
+    // The SEND action is what throws, so that is what is gated.
     const phone = document.querySelector('input[name="phone"]') as HTMLInputElement | null;
     if (phone) expect(phone.disabled).toBe(false);
     const submit = document.querySelector('button[type="submit"]') as HTMLButtonElement | null;
@@ -295,7 +295,8 @@ describe("auth pages", () => {
     renderPage(<WorkerAuth />, { route: "/login/worker" });
     expect(document.body.textContent).toMatch(/checking which sign-in/i);
     const phoneTab = screen.getByRole("button", { name: /mobile/i });
-    expect((phoneTab as HTMLButtonElement).disabled).toBe(true);
+    // Tabs and fields are always usable; only sending is gated.
+    expect((phoneTab as HTMLButtonElement).disabled).toBe(false);
     // The FIELD stays typeable: disabling it made the screen look broken and
     // locked the worker out of a tab they had already chosen. Only the send
     // action is gated, because that is the part that would throw.
