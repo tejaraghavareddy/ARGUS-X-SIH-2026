@@ -74,8 +74,17 @@ function usingTestingSender(): boolean {
 /**
  * A short, human-readable form for logs, so a failure never echoes a full
  * address back into a server log or an error surface.
+ *
+ * Defensive about a missing address on purpose. This runs only on the failure
+ * path, so a crash here does not merely lose a feature — it replaces a named,
+ * actionable Resend error ("the sender is restricted to your account") with an
+ * unhandled `TypeError`, which Convex surfaces as a bare Server Error. That is
+ * the one symptom with dozens of causes, and it is the exact thing this file
+ * exists to avoid. Observed live, not hypothesised: a malformed sign-in call
+ * arrived with no identifier and the crash buried the vendor's own reason.
  */
-function maskEmail(address: string): string {
+function maskEmail(address: string | null | undefined): string {
+  if (typeof address !== "string" || !address.includes("@")) return "•••";
   const [local = "", domain = ""] = address.split("@");
   if (!domain) return "•••";
   const head = local.slice(0, 2);
@@ -98,7 +107,7 @@ function maskEmail(address: string): string {
 export function describeResendFailure(
   status: number,
   detail: string,
-  recipient: string,
+  recipient: string | null | undefined,
 ): string {
   const to = maskEmail(recipient);
 
@@ -210,7 +219,7 @@ export async function sendSigninEmail({
   email,
   token,
 }: {
-  email: string;
+  email: string | null | undefined;
   token: string;
 }): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;

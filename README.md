@@ -304,7 +304,7 @@ anything under `src/convex/`, the Convex push must succeed first.
 
 ## Testing
 
-**569 tests across 32 files**, all passing.
+**570 tests across 32 files**, all passing.
 
 | Area | Files |
 | --- | --- |
@@ -379,15 +379,17 @@ confirm the test fails. A test that cannot fail is not evidence.
 Stated plainly, because a prototype that hides these is harder to trust:
 
 - **SMS delivery is untested end-to-end.** Everything up to handing the code
-  to Vonage is covered by tests; the live request is not, because no
-  credentials were available during development.
-- **Email delivery is likewise untested end-to end**, against the same
-  reasoning. One credential is enough to attempt a send — `RESEND_API_KEY`
-  alone, with `onboarding@resend.dev` as the sender — but Resend delivers that
-  testing sender **only to the address on the account that owns the key**, so a
-  code to any other inbox is refused with a 403 until a sending domain is
-  verified. `describeResendFailure` names that case specifically rather than
-  leaving it as a bare Server Error.
+  to Vonage is covered by tests; the live request is not, because
+  `VONAGE_API_SECRET` is unset and a send stops at the credential check.
+- **Email delivery is verified as far as the sender restriction, not past
+  it.** A live send was issued against Resend and returned a 403 naming the
+  testing-sender restriction — which proves the key is valid, the payload
+  parses, and the request reaches Resend. What is *not* yet proven is a code
+  landing in a real inbox, because the only address the testing sender will
+  deliver to is the one on the Resend account. Verifying a sending domain, or
+  one successful send to the account holder's own address, closes that gap.
+  `describeResendFailure` names the restriction rather than leaving it as a
+  bare Server Error.
 - **Booking-location GPS is client-reported.** Adequate for dispatch, not a
   tamper-evident audit trail. It is tamper-*detectable* — see the plausibility
   work in `src/lib/geo.ts` — but a determined client can still lie.

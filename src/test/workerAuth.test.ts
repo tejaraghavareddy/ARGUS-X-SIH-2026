@@ -446,4 +446,17 @@ describe("describeResendFailure", () => {
       expect(classify(status, "")).not.toContain(who);
     }
   });
+
+  it("still names the cause when the recipient is missing entirely", () => {
+    // Regression, found by probing the live deployment rather than by a test:
+    // a malformed sign-in call arrived with no identifier, and maskEmail did
+    // `address.split("@")` on null — so the TypeError replaced Resend's own
+    // explanation with a bare Server Error. The failure path has to survive a
+    // failure on the failure path.
+    for (const missing of [null, undefined, "", "not-an-address"]) {
+      const message = describeResendFailure(403, "", missing);
+      expect(message).toMatch(/testing sender/);
+      expect(message).toMatch(/Email delivery failed/);
+    }
+  });
 });

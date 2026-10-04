@@ -142,9 +142,10 @@ point, nothing to do with payments) and was deleted along with its regional
 imports.
 
 **Docs are coupled to the test count.** `README.md` and `SIH_SUBMISSION.md` both
-state **569 tests across 32 files**. That's a measured number, not a claim: the
-most recent delta is the 5 delivery-gate tests in `authProviders.test.ts`, added
-when the email gate moved to a single Resend credential. If you add or drop a
+state **570 tests across 32 files**. That's a measured number, not a claim: the
+most recent delta is the delivery-gate tests in `authProviders.test.ts` plus a
+null-recipient regression test in `workerAuth.test.ts`, the latter found by
+probing the live deployment rather than by a failing test. If you add or drop a
 test, both docs go stale.
 
 ---
@@ -186,7 +187,7 @@ it's the line a reviewer will push on.
 ```bash
 bunx convex dev --once    # required after editing anything in src/convex/
 bunx tsc -b --noEmit      # frontend typecheck
-bun run test              # 569 tests / 32 files
+bun run test              # 570 tests / 32 files
 bun run lint
 ```
 
