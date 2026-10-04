@@ -5,23 +5,29 @@ import { RandomReader, generateRandomString } from "@oslojs/crypto/random";
 import { EMAIL_PROVIDER_ID } from "../../lib/authProviders";
 
 /**
- * Sign-in codes by email, delivered through SendGrid.
+ * Sign-in codes by email, delivered through Resend.
  *
- * ## Why SendGrid
+ * ## One credential, not two
  *
- * Two earlier choices, and what each cost:
+ * Resend authenticates with a single API key. There is no second secret, and
+ * this file asks for exactly one: `RESEND_API_KEY`. That is deliberate — an
+ * earlier iteration required a key *and* a verified sender address, which is
+ * SendGrid's shape, not Resend's, and it meant email sign-in could never be
+ * switched on from a single pasted value.
  *
- *  - The platform endpoint `auth.freebuff.app/send_otp` needs a credential
- *    that is not self-serve, which left `/auth` permanently unable to send.
- *  - Resend fixed that, but only accepts its `onboarding@resend.dev` testing
- *    sender for delivery to the account holder's own inbox; anything else
- *    needs a verified *domain*, which means DNS records at a registrar.
+ * ## What the single key does and does not buy
  *
- * SendGrid's equivalent gate is a **single sender** verification, which is an
- * email click rather than a DNS change. For a student team that is the
- * difference between a five-minute setup and a half-hour one, and it is the
- * only reason this file changed — the anti-spam rule it is working around is
- * universal, not a Resend quirk.
+ * With only the key, sends go out as `onboarding@resend.dev` — Resend's
+ * testing sender — and **Resend delivers those only to the email address on
+ * the account that owns the key.** Sending to any other address is refused
+ * with a 403. That is an anti-spam rule, not a bug, and it is the one thing
+ * to know before testing.
+ *
+ * So out of the box this file delivers real codes to the account holder and
+ * to nobody else. Lifting that needs a verified sending domain (DNS records at
+ * a registrar), after which `RESEND_FROM_EMAIL` can name any address on it.
+ * That variable is optional and absent-by-default: unset is a working
+ * configuration, not a misconfiguration.
  *
  * ## What this file is NOT
  *
@@ -32,39 +38,37 @@ import { EMAIL_PROVIDER_ID } from "../../lib/authProviders";
  * `authThrottle.requestOtp` is spent one layer out before it.
  *
  * Set in the project's Keys/API keys tab:
- *   SENDGRID_API_KEY    — from https://app.sendgrid.com/settings/api_keys
- *   SENDGRID_FROM_EMAIL — a sender you have verified in SendGrid
+ *   RESEND_API_KEY     — from https://resend.com/api-keys
+ *   RESEND_FROM_EMAIL  — optional; a sender on a verified Resend domain
  */
 
-const SENDGRID_URL = "https://api.sendgrid.com/v3/mail/send";
-
-/**
- * Stand-in used when no sender is configured.
- *
- * SendGrid has no sandbox sender — every `from` must be verified first — so
- * this address is not expected to deliver anything. It exists so the request
- * that fails carries a message naming the fix, instead of a bare 403.
- */
-const UNVERIFIED_SENDER = "no-reply@sahakar.invalid";
+const RESEND_URL = "https://api.resend.com/emails";
 
 /**
- * The From address.
+ * The sender used when `RESEND_FROM_EMAIL` is unset.
  *
- * SendGrid will not send from an address the account has not verified, so this
- * returns a placeholder unless SENDGRID_FROM_EMAIL names one. A developer who
- * has just pasted a key then gets a named failure naming the fix, rather than
- * a blank refusal.
+ * This is a real, working sender — not a placeholder — but Resend restricts
+ * it to the account holder's own inbox. Choosing it as the default is what
+ * makes a single API key a sufficient configuration.
  */
-function fromAddress(): { email: string; name: string } {
-  const raw = process.env.SENDGRID_FROM_EMAIL?.trim();
-  if (!raw) return { email: UNVERIFIED_SENDER, name: "Sahakar Seva" };
-  // Accept both "a@b.com" and "Name <a@b.com>" so the field can be pasted
-  // either way without failing on the format.
-  const angled = raw.match(/^(.*?)<([^>]+)>$/);
-  if (angled) {
-    return { email: angled[2].trim(), name: angled[1].trim() || "Sahakar Seva" };
-  }
-  return { email: raw, name: "Sahakar Seva" };
+const TESTING_SENDER = "Sahakar Seva <onboarding@resend.dev>";
+
+/**
+ * The `from` value, exactly as Resend wants it.
+ *
+ * Resend takes one string and parses `Name <a@b.com>` itself, so — unlike the
+ * SendGrid version of this file — there is nothing to split and nothing to
+ * reassemble. A pasted value is passed through verbatim, which is also why a
+ * malformed one surfaces as Resend's own 422 rather than a silent no-op.
+ */
+function fromAddress(): string {
+  const raw = process.env.RESEND_FROM_EMAIL?.trim();
+  return raw || TESTING_SENDER;
+}
+
+/** True when sends are going out as Resend's account-restricted testing sender. */
+function usingTestingSender(): boolean {
+  return !process.env.RESEND_FROM_EMAIL?.trim();
 }
 
 /**
@@ -79,61 +83,70 @@ function maskEmail(address: string): string {
 }
 
 /**
- * Turn a SendGrid refusal into something a developer can act on.
+ * Turn a Resend refusal into something a developer can act on.
  *
  * Without this the thrown message is a raw vendor payload, which Convex then
  * renders client-side as a bare `[CONVEX A(auth:signIn)] Server Error` — the
- * one symptom with dozens of causes. Naming the likely cause turns an
- * unactionable failure into a five-minute fix.
+ * one symptom with dozens of causes.
  *
- * The unverified-sender case is by far the most common on a fresh account, and
- * it is the one a developer cannot infer from a 403.
+ * The 403 branch is the one that matters most here. With only an API key
+ * configured, *every* send to anyone but the account holder lands there, and
+ * the generic reading — "forbidden" — sends people looking for a permissions
+ * problem that does not exist. It is a sender restriction, and the fix is a
+ * verified domain.
  */
-export function describeSendgridFailure(
+export function describeResendFailure(
   status: number,
   detail: string,
   recipient: string,
 ): string {
   const to = maskEmail(recipient);
-  const usingUnverifiedSender = !process.env.SENDGRID_FROM_EMAIL;
 
   if (status === 401) {
+    // Distinct from 403 on purpose: a 401 is the key itself and nothing to do
+    // with the sender. Merging the two tells someone with a revoked key to go
+    // and verify a domain, which cannot possibly help.
     return (
-      `Email delivery failed for ${to}: SendGrid rejected the API key (401). ` +
-      `SENDGRID_API_KEY is set but not valid — create a key under ` +
-      `Settings → API Keys → Restricted Access, with Mail Send enabled.`
+      `Email delivery failed for ${to}: Resend API key is invalid (401). ` +
+      `RESEND_API_KEY is set but not valid — create one at ` +
+      `https://resend.com/api-keys and check it is not revoked.`
     );
   }
 
-  // 403 is SendGrid's response for an unverified or unauthorised sender.
   if (status === 403) {
-    if (usingUnverifiedSender) {
+    if (usingTestingSender()) {
+      // 403 here is almost never a permissions problem: it is Resend refusing
+      // to deliver onboarding@resend.dev to an address that is not the
+      // account holder's. Anything sent to your own inbox still works.
       return (
-        `Email delivery failed for ${to}: SendGrid refused the sender (403). ` +
-        `SENDGRID_FROM_EMAIL is not set, so there is no sender to send as. ` +
-        `Verify an address under Settings → Sender Identity (an email click, ` +
-        `no DNS needed), then set SENDGRID_FROM_EMAIL to it.`
+        `Email delivery failed for ${to}: Resend refused the testing sender ` +
+        `(403). onboarding@resend.dev only delivers to the address on the ` +
+        `Resend account that owns the key. Either send to that address, or ` +
+        `verify a sending domain on Resend and set RESEND_FROM_EMAIL to a ` +
+        `sender on it.`
       );
     }
     return (
-      `Email delivery failed for ${to}: SendGrid refused the sender (403). ` +
-      `SENDGRID_FROM_EMAIL is set to an address this account has not verified — ` +
-      `check Settings → Sender Identity and its verification status.`
+      `Email delivery failed for ${to}: Resend rejected the request (${status}). ` +
+      `If RESEND_FROM_EMAIL is set, that address is on no verified Resend ` +
+      `domain — verify the domain first, then set RESEND_FROM_EMAIL.`
     );
   }
 
-  if (status === 413) {
+  if (status === 422) {
     return (
-      `Email delivery failed for ${to}: the message was rejected as spam (413). ` +
-      `SendGrid blocks suspicious template content; keep the code plain and the ` +
-      `sender verified.`
+      `Email delivery failed for ${to}: Resend rejected the message as invalid ` +
+      `(422). ${detail.slice(0, 300)}`
     );
   }
 
   if (status === 429) {
+    // Never reads as a sender problem — it is a quota, and the two have
+    // opposite remedies.
     return (
-      `Email delivery failed for ${to}: SendGrid rate-limited this account (429). ` +
-      `The free tier is capped at 100 messages a day — wait, or upgrade.`
+      `Email delivery failed for ${to}: Resend rate-limited this account (429). ` +
+      `The free tier is capped at 100 emails a day and 10 an hour — wait, ` +
+      `or upgrade.`
     );
   }
 
@@ -141,23 +154,26 @@ export function describeSendgridFailure(
 }
 
 /**
- * Flatten SendGrid's refusal body to a plain string.
+ * Flatten a Resend refusal body to a plain string.
  *
- * It answers with `{"errors":[{"message","field","help"}, ...]}` — an array,
- * not the single `message` most providers return, so a raw read of the body
- * renders as `[object Object]` and names nothing. Kept separate from
- * `describeSendgridFailure` so that stays a pure function of its arguments.
+ * `message` is usually a string, but validation failures answer with an array
+ * of `{ message, fieldName }` objects. A raw read of that renders as
+ * `[object Object]` and names nothing, which defeats the point of carrying the
+ * detail at all.
  */
-function sendgridDetail(body: string): string {
+function resendDetail(body: string): string {
   try {
     const parsed = JSON.parse(body) as {
-      errors?: Array<{ message?: string; field?: string; help?: string }>;
+      message?: string | Array<{ message?: string; fieldName?: string }>;
+      name?: string;
     };
-    if (Array.isArray(parsed.errors) && parsed.errors.length > 0) {
-      return parsed.errors
+    const { message } = parsed;
+    if (typeof message === "string" && message) return message;
+    if (Array.isArray(message) && message.length > 0) {
+      return message
         .map((entry) => {
-          const where = entry.field ? `${entry.field}: ` : "";
-          return `${where}${entry.message ?? entry.help ?? "unreadable SendGrid error"}`;
+          const where = entry.fieldName ? `${entry.fieldName}: ` : "";
+          return `${where}${entry.message ?? "unreadable Resend error"}`;
         })
         .join("; ");
     }
@@ -167,8 +183,11 @@ function sendgridDetail(body: string): string {
   return body;
 }
 
+/** Six digits, matching the code length the sign-in screens validate. */
+export const SIGNIN_CODE_LENGTH = 6;
+
 /**
- * Send one sign-in code to one address through SendGrid.
+ * Send one sign-in code to one address through Resend.
  *
  * ## Why this is a named function and not just the provider callback
  *
@@ -194,48 +213,43 @@ export async function sendSigninEmail({
   email: string;
   token: string;
 }): Promise<void> {
-  const apiKey = process.env.SENDGRID_API_KEY;
+  const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     // Fail loudly rather than silently dropping sign-in codes: a missing key
     // is a configuration error, and the thrown error surfaces in the server
     // log instead of looking like a delivery failure to the customer.
     throw new Error(
-      "SENDGRID_API_KEY is not set — add it in the project's Keys/API keys tab.",
+      "RESEND_API_KEY is not set — add it in the project's Keys/API keys tab.",
     );
   }
 
-  // Plain fetch rather than axios: this is one POST to a JSON endpoint, and
-  // fetch needs no dependency in the function bundle.
+  const text = `${token} is your Sahakar Seva sign-in code. It expires in 15 minutes. Do not share it with anyone.`;
+
+  // Plain fetch rather than the `resend` SDK: this is one POST to a JSON
+  // endpoint, and fetch needs no dependency in the function bundle.
   let response: Response;
   try {
-    response = await fetch(SENDGRID_URL, {
+    response = await fetch(RESEND_URL, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      // SendGrid's v3 shape: `personalizations` carries the recipients, and
-      // both a text and an HTML part live in `content`. Its flat `to`/`text`
-      // fields are Resend's, not its own, and are silently ignored.
+      // Resend's shape: flat `from` / `to` / `subject` / `text` / `html`, with
+      // `to` an array. The nested `personalizations` + `content` pair belongs
+      // to SendGrid and is silently ignored here — which is the exact way a
+      // code goes missing while the API answers 200.
       body: JSON.stringify({
-        personalizations: [{ to: [{ email }] }],
         from: fromAddress(),
+        to: [email],
         subject: `${token} is your Sahakar Seva sign-in code`,
-        content: [
-          {
-            type: "text/plain",
-            value: `${token} is your Sahakar Seva sign-in code. It expires in 15 minutes. Do not share it with anyone.`,
-          },
-          {
-            type: "text/html",
-            value:
-              `<html><body style="font-family:system-ui,-apple-system,sans-serif;max-width:420px">` +
-              `<p style="font-size:15px;color:#0f172a">Your Sahakar Seva sign-in code is</p>` +
-              `<p style="font-size:32px;font-weight:800;letter-spacing:6px;color:#047857;margin:16px 0">${token}</p>` +
-              `<p style="font-size:13px;color:#64748b">It expires in 15 minutes. Do not share it with anyone.</p>` +
-              `</body></html>`,
-          },
-        ],
+        text,
+        html:
+          `<html><body style="font-family:system-ui,-apple-system,sans-serif;max-width:420px">` +
+          `<p style="font-size:15px;color:#0f172a">Your Sahakar Seva sign-in code is</p>` +
+          `<p style="font-size:32px;font-weight:800;letter-spacing:6px;color:#047857;margin:16px 0">${token}</p>` +
+          `<p style="font-size:13px;color:#64748b">It expires in 15 minutes. Do not share it with anyone.</p>` +
+          `</body></html>`,
       }),
     });
   } catch (error) {
@@ -244,20 +258,18 @@ export async function sendSigninEmail({
     );
   }
 
-  // SendGrid answers 202 for an accepted send, and non-2xx with an `errors`
-  // array for anything it refused — an unverified from address being the
-  // usual one. Both are surfaced, because "the code did not arrive" is
-  // otherwise indistinguishable from "the address is wrong".
+  // Resend answers 200 with `{ "id": "..." }` for an accepted send, and non-2xx
+  // with `{ statusCode, message, name }` for anything it refused — the
+  // account-restricted testing sender being the usual one. Both are surfaced,
+  // because "the code did not arrive" is otherwise indistinguishable from
+  // "the address is wrong".
   if (!response.ok) {
     const detail = await response.text().catch(() => "");
     throw new Error(
-      describeSendgridFailure(response.status, sendgridDetail(detail), email),
+      describeResendFailure(response.status, resendDetail(detail), email),
     );
   }
 }
-
-/** Six digits, matching the code length the sign-in screens validate. */
-export const SIGNIN_CODE_LENGTH = 6;
 
 const base = Email({
   async generateVerificationToken() {

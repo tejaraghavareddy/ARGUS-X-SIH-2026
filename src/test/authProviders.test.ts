@@ -1,9 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, afterEach, vi } from "vitest";
 import {
   EMAIL_PROVIDER_ID,
   PHONE_PROVIDER_ID,
 } from "@/lib/authProviders";
 import { emailOtp } from "@/convex/auth/emailOtp";
+import { emailOtpAvailable, phoneOtpAvailable } from "@/convex/authConfig";
 import { phoneOtp, CODE_TTL_MIN } from "@/convex/auth/phoneOtp";
 import {
   demoAdmin,
@@ -104,5 +105,88 @@ describe("auth provider registration", () => {
     // result: its id must not be the "credentials" default above.
     expect(anonymous.id).toBe("anonymous");
     expect(anonymous.id).not.toBe("credentials");
+  });
+});
+
+/**
+ * The delivery gate.
+ *
+ * `authConfig.delivery` decides whether a sign-in screen offers email or SMS at
+ * all. Getting it wrong is invisible either way: too strict and a working
+ * method stays hidden, too loose and a dead button is put in front of a user
+ * whose code will never arrive.
+ *
+ * The email gate is one credential — `RESEND_API_KEY` — and that is the whole
+ * point of the switch to Resend. Resend authenticates with a key alone and
+ * falls back to its `onboarding@resend.dev` testing sender, so requiring a
+ * second value here (as the SendGrid configuration did, needing a verified
+ * sender address) would make email sign-in impossible to switch on from a
+ * single pasted key. These assertions exist so that regression is loud.
+ */
+describe("email delivery gate", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  const gate = () => emailOtpAvailable();
+
+  it("is available from the API key alone, with no sender configured", () => {
+    // The requirement, stated as a test: one credential is a whole
+    // configuration. If this ever needs RESEND_FROM_EMAIL as well, something
+    // has reintroduced SendGrid's two-value shape.
+    vi.stubEnv("RESEND_API_KEY", "re_test-key");
+    vi.stubEnv("RESEND_FROM_EMAIL", "");
+    expect(gate()).toBe(true);
+  });
+
+  it("stays available when a sender IS configured", () => {
+    // The optional variable must not become a requirement in the other
+    // direction either — a verified domain is an upgrade, not a gate.
+    vi.stubEnv("RESEND_API_KEY", "re_test-key");
+    vi.stubEnv("RESEND_FROM_EMAIL", "no-reply@sahakar.example");
+    expect(gate()).toBe(true);
+  });
+
+  it("is unavailable with no key at all", () => {
+    vi.stubEnv("RESEND_API_KEY", "");
+    expect(gate()).toBe(false);
+  });
+
+  it("does not fall back to the SendGrid variables", () => {
+    // Guards a subtler regression: leaving the old keys in the predicate would
+    // mean a deployment carrying only SendGrid config still shows a live email
+    // button, and one carrying only Resend config does not.
+    vi.stubEnv("RESEND_API_KEY", "");
+    vi.stubEnv("SENDGRID_API_KEY", "SG.stale-key");
+    vi.stubEnv("SENDGRID_FROM_EMAIL", "no-reply@sahakar.example");
+    expect(gate()).toBe(false);
+  });
+});
+
+/**
+ * The SMS gate, for contrast.
+ *
+ * Vonage is not reducible to one value the way Resend is: a key alone
+ * authenticates nothing and a secret alone is not a credential. Both halves are
+ * genuinely required, so this pins the *difference* between the two vendors
+ * rather than restating the email rule.
+ */
+describe("SMS delivery gate", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("needs both a key and a secret, because Vonage genuinely requires both", () => {
+    vi.stubEnv("VONAGE_API_KEY", "key-only");
+    vi.stubEnv("VONAGE_API_SECRET", "");
+    expect(phoneOtpAvailable()).toBe(false);
+
+    vi.stubEnv("VONAGE_API_KEY", "");
+    vi.stubEnv("VONAGE_API_SECRET", "secret-only");
+    expect(phoneOtpAvailable()).toBe(false);
+
+    vi.stubEnv("VONAGE_API_KEY", "both");
+    vi.stubEnv("VONAGE_API_SECRET", "both");
+    expect(phoneOtpAvailable()).toBe(true);
   });
 });

@@ -16,7 +16,7 @@ import {
   CODE_TTL_MIN,
   describeVonageFailure,
 } from "@/convex/auth/phoneOtp";
-import { emailOtp, describeSendgridFailure } from "@/convex/auth/emailOtp";
+import { emailOtp, describeResendFailure } from "@/convex/auth/emailOtp";
 import { EMAIL_PROVIDER_ID, PHONE_PROVIDER_ID } from "@/lib/authProviders";
 import { signInPathFor, isWorkerPath } from "@/lib/portal";
 import { setupTest, api, must, seedUser } from "./convexHarness";
@@ -288,13 +288,16 @@ function sendCode(identifier: string, token: string): Promise<void> {
 }
 
 /** Capture the single fetch the send performs, and reply with `status`. */
-function captureSend(status = 202): {
+function captureSend(status = 200): {
   calls: Array<{ url: string; init: RequestInit }>;
 } {
   const calls: Array<{ url: string; init: RequestInit }> = [];
   vi.stubGlobal("fetch", async (url: string, init: RequestInit) => {
     calls.push({ url, init });
-    return new Response(status === 202 ? "" : '{"errors":[]}', { status });
+    return new Response(
+      status === 200 ? '{"id":"abc"}' : '{"message":"no"}',
+      { status },
+    );
   });
   return { calls };
 }
@@ -305,85 +308,78 @@ describe("email send payload", () => {
     vi.unstubAllEnvs();
   });
 
-  it("speaks SendGrid's v3 shape, not the flat to/text one", async () => {
-    // Regression: the payload was written in Resend's shape (top-level `to`,
-    // `text`, `html`). SendGrid reads `personalizations` and `content`, and
-    // answers "The personalizations field is required" — so this is exactly
-    // the vendor error that produced the bare Server Error.
-    vi.stubEnv("SENDGRID_API_KEY", "SG.test-key");
-    vi.stubEnv("SENDGRID_FROM_EMAIL", "no-reply@sahakar.example");
+  it("speaks Resend's flat shape, not SendGrid's nested one", async () => {
+    // Regression: this payload was written in SendGrid's v3 shape
+    // (`personalizations` + `content`). Resend reads top-level `from`/`to`/
+    // `text`/`html` and ignores those entirely — a 200 with nothing
+    // delivered, which is the worst possible failure: it looks like success.
+    vi.stubEnv("RESEND_API_KEY", "re_test-key");
+    vi.stubEnv("RESEND_FROM_EMAIL", "no-reply@sahakar.example");
     const { calls } = captureSend();
 
     await sendCode("kisan@example.com", "424242");
 
     expect(calls).toHaveLength(1);
     const [call] = calls;
-    expect(call.url).toBe("https://api.sendgrid.com/v3/mail/send");
+    expect(call.url).toBe("https://api.resend.com/emails");
 
     const headers = call.init.headers as Record<string, string>;
-    expect(headers.Authorization).toBe("Bearer SG.test-key");
+    expect(headers.Authorization).toBe("Bearer re_test-key");
     expect(headers["Content-Type"]).toBe("application/json");
 
     const body = JSON.parse(String(call.init.body));
-    expect(body.personalizations).toEqual([{ to: [{ email: "kisan@example.com" }] }]);
-    expect(body.from).toEqual({
-      email: "no-reply@sahakar.example",
-      name: "Sahakar Seva",
-    });
+    expect(body.to).toEqual(["kisan@example.com"]);
+    expect(body.from).toBe("no-reply@sahakar.example");
     expect(body.subject).toContain("424242");
-    expect(body.content.map((part: { type: string }) => part.type)).toEqual([
-      "text/plain",
-      "text/html",
-    ]);
-    // The fields SendGrid does not read must be gone, or they read as though
-    // the payload were correct while still delivering to nobody.
-    expect(body).not.toHaveProperty("to");
-    expect(body).not.toHaveProperty("text");
-    expect(body).not.toHaveProperty("html");
+    // Resend derives a text version from `html` when `text` is absent, so
+    // sending both is deliberate: some clients still render the plain part.
+    expect(body.text).toContain("424242");
+    expect(body.html).toContain("424242");
+    // The fields Resend does not read must be gone, or they read as though the
+    // payload were correct while still delivering to nobody.
+    expect(body).not.toHaveProperty("personalizations");
+    expect(body).not.toHaveProperty("content");
   });
 
-  it("carries the code in both parts of the message", async () => {
-    vi.stubEnv("SENDGRID_API_KEY", "SG.test-key");
-    vi.stubEnv("SENDGRID_FROM_EMAIL", "no-reply@sahakar.example");
+  it("defaults to Resend's testing sender so one key is a whole configuration", async () => {
+    // The point of this transport: RESEND_FROM_EMAIL is optional. Unset is a
+    // working setup, not a broken one.
+    vi.stubEnv("RESEND_API_KEY", "re_test-key");
+    vi.stubEnv("RESEND_FROM_EMAIL", "");
     const { calls } = captureSend();
 
     await sendCode("kisan@example.com", "424242");
 
     const body = JSON.parse(String(calls[0].init.body));
-    for (const part of body.content) {
-      expect(part.value).toContain("424242");
-    }
+    expect(body.from).toBe("Sahakar Seva <onboarding@resend.dev>");
   });
 
-  it("splits a pasted 'Name <a@b.com>' sender into the two SendGrid fields", async () => {
-    vi.stubEnv("SENDGRID_API_KEY", "SG.test-key");
-    vi.stubEnv("SENDGRID_FROM_EMAIL", "Sahakar Seva <no-reply@sahakar.example>");
+  it("passes a pasted 'Name <a@b.com>' sender through verbatim", async () => {
+    // Resend parses the angled form itself, so unlike the SendGrid version of
+    // this file there is nothing to split — and nothing to get wrong doing it.
+    vi.stubEnv("RESEND_API_KEY", "re_test-key");
+    vi.stubEnv("RESEND_FROM_EMAIL", "Sahakar Seva <no-reply@sahakar.example>");
     const { calls } = captureSend();
 
     await sendCode("kisan@example.com", "424242");
 
     const body = JSON.parse(String(calls[0].init.body));
-    expect(body.from).toEqual({
-      email: "no-reply@sahakar.example",
-      name: "Sahakar Seva",
-    });
+    expect(body.from).toBe("Sahakar Seva <no-reply@sahakar.example>");
   });
 
   it("fails by name when no API key is configured", async () => {
     // An unset key used to reach the vendor as `Bearer undefined` and come back
     // as an opaque 401 that read like bad credentials rather than a missing one.
-    vi.stubEnv("SENDGRID_API_KEY", "");
-    vi.stubEnv("SENDGRID_FROM_EMAIL", "no-reply@sahakar.example");
+    vi.stubEnv("RESEND_API_KEY", "");
     captureSend();
 
     await expect(sendCode("kisan@example.com", "424242")).rejects.toThrow(
-      /SENDGRID_API_KEY is not set/,
+      /RESEND_API_KEY is not set/,
     );
   });
 
   it("turns a refusal into a named error instead of a bare status", async () => {
-    vi.stubEnv("SENDGRID_API_KEY", "SG.test-key");
-    vi.stubEnv("SENDGRID_FROM_EMAIL", "no-reply@sahakar.example");
+    vi.stubEnv("RESEND_API_KEY", "re_test-key");
     captureSend(403);
 
     await expect(sendCode("kisan@example.com", "424242")).rejects.toThrow(/403/);
@@ -395,42 +391,50 @@ describe("email send payload", () => {
  * only thing standing between a refused send and a bare
  * `[CONVEX A(auth:signIn)] Server Error`.
  */
-describe("describeSendgridFailure", () => {
+describe("describeResendFailure", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
   });
 
   const who = "kisan.sahakar@example.com";
   const classify = (status: number, detail: string) =>
-    describeSendgridFailure(status, detail, who);
+    describeResendFailure(status, detail, who);
+
+  it("explains the testing sender's account restriction, not a permissions fault", () => {
+    // The most important message in this file. With only an API key set, every
+    // send to a non-owner inbox lands on 403, and the generic reading
+    // ("forbidden") sends people hunting a permissions problem that does not
+    // exist.
+    vi.stubEnv("RESEND_FROM_EMAIL", "");
+    const message = classify(403, "");
+    expect(message).toMatch(/testing sender/);
+    expect(message).toMatch(/RESEND_FROM_EMAIL/);
+    expect(message).not.toMatch(/rejected the request/);
+  });
+
+  it("blames an unverified custom sender on 403 instead", () => {
+    // Two different remedies: verify a domain, versus send to your own inbox.
+    vi.stubEnv("RESEND_FROM_EMAIL", "no-reply@sahakar.example");
+    expect(classify(403, "")).toMatch(/no verified Resend domain/);
+  });
 
   it("names bad credentials on 401", () => {
-    expect(classify(401, "")).toMatch(/Restricted Access, with Mail Send/);
-  });
-
-  it("blames the sender identity on 403, which is the usual cause", () => {
-    vi.stubEnv("SENDGRID_FROM_EMAIL", "no-reply@sahakar.example");
-    expect(classify(403, "")).toMatch(/has not verified/);
-  });
-
-  it("tells an unconfigured sender apart from an unverified one", () => {
-    // The two 403s need different advice: one is "go and verify something",
-    // the other is "the thing you verified is not this". Conflating them sends
-    // a developer to re-verify an address that is already verified.
-    vi.stubEnv("SENDGRID_FROM_EMAIL", "");
-    expect(classify(403, "")).toMatch(/SENDGRID_FROM_EMAIL is not set/);
+    vi.stubEnv("RESEND_FROM_EMAIL", "");
+    expect(classify(401, "")).toMatch(/API key is invalid/);
   });
 
   it("reports throttling as throttling, not as a sender problem", () => {
-    // 429 must never read as "fix your sender identity" — it is a daily quota,
-    // and the two have opposite remedies.
-    vi.stubEnv("SENDGRID_FROM_EMAIL", "");
-    expect(classify(429, "")).toMatch(/100 messages a day/);
-    expect(classify(429, "")).not.toMatch(/Sender Identity/);
+    // 429 must never read as "fix your sender" — it is a quota, and the two
+    // have opposite remedies.
+    vi.stubEnv("RESEND_FROM_EMAIL", "");
+    expect(classify(429, "")).toMatch(/100 emails a day/);
+    expect(classify(429, "")).not.toMatch(/RESEND_FROM_EMAIL/);
   });
 
-  it("names a spam rejection on 413", () => {
-    expect(classify(413, "")).toMatch(/spam/i);
+  it("keeps Resend's own reason for a rejected message", () => {
+    expect(classify(422, "Invalid from address")).toMatch(
+      /Invalid from address/,
+    );
   });
 
   it("falls back to the raw detail for an unrecognised failure", () => {
@@ -438,7 +442,7 @@ describe("describeSendgridFailure", () => {
   });
 
   it("never leaks a full address into the message", () => {
-    for (const status of [401, 403, 413, 429, 500]) {
+    for (const status of [401, 403, 422, 429, 500]) {
       expect(classify(status, "")).not.toContain(who);
     }
   });
