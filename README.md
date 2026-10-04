@@ -22,6 +22,7 @@ Built for **SIH 2026 problem statement 26089** (Ministry of Cooperation).
 - [Data model](#data-model)
 - [The 90/7/3 split](#the-9073-split)
 - [Environment variables](#environment-variables)
+- [Demoing without any credential](#demoing-without-any-credential)
 - [Local development](#local-development)
 - [Testing](#testing)
 - [Security posture](#security-posture)
@@ -271,6 +272,27 @@ no gateway account and no API key on this rail.
 - **Weather** — Open-Meteo is keyless by design. A forecast feature behind a
   credential nobody can obtain in the time available is a feature that does
   not run.
+
+## Demoing without any credential
+
+Sign-in works with **zero** API keys. Two keyless doors exist, both verified
+against the live deployment:
+
+| Door | Where | How |
+| --- | --- | --- |
+| **Continue as guest** | `/auth`, `/customer-auth` | A button on the page. Calls `signIn("anonymous")` and drops straight into the portal. Nothing to type, nothing to configure. |
+| **Demo officer** | Admin login modal | `demo.admin@sahakar.demo` with code `000000` |
+
+Use the guest door for showing the product to anyone. Use the demo officer when
+you need the federation console, which guests are not permitted.
+
+This is deliberate, not a workaround. OTP delivery depends on credentials that
+may not be configured on a given deployment, so a product whose entry point
+required a live SMS or email vendor would be undemoable whenever that vendor
+was missing. The guest door keeps the app walkable in that case, and the OTP
+paths remain the real sign-in for real members.
+
+---
 
 ## Local development
 

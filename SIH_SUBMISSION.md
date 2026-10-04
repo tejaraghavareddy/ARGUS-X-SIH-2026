@@ -159,6 +159,14 @@ fails into a dead end.
 4.2 For workers (artisans)
   - Sign in by mobile OTP over SMS from a dedicated worker portal, or by email
     OTP. A phone-first, low-text screen for field users.
+  - Both OTP paths are real and credential-gated, and the sign-in screens keep a
+    method INERT until the server confirms a delivery credential exists — so a
+    method is never offered that is guaranteed to fail. Because delivery
+    depends on vendor credentials that a given deployment may not carry, the
+    app also ships two keyless doors, both verified working: "continue as
+    guest" on the sign-in page, and a demo federation officer
+    (demo.admin@sahakar.demo). The product is walkable end to end without any
+    API key; the OTP paths remain the sign-in for real members.
   - Four-gate onboarding, each gate a real decision: trade profile, KYC upload and
     review, a voice-skill quiz in the worker's own language, and operational
     setup. Passing awards a digital cooperative trade credential, format
