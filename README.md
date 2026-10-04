@@ -245,8 +245,8 @@ Set these in the project's **Keys / API keys** tab. They are never committed.
 | --- | --- | --- |
 | `RESEND_API_KEY` | `auth/emailOtp.ts` | Email sign-in fails. **The only credential email sign-in needs** |
 | `RESEND_FROM_EMAIL` | `auth/emailOtp.ts` | Optional. Unset, sends go out as `onboarding@resend.dev`, which **Resend delivers only to the address on the Resend account that owns the key.** Set it to a sender on a verified Resend domain to reach any other inbox |
-| `VONAGE_API_KEY` | `auth/phoneOtp.ts` | SMS sign-in fails |
-| `VONAGE_API_SECRET` | `auth/phoneOtp.ts` | SMS sign-in fails |
+| `VONAGE_API_KEY` | `auth/phoneOtp.ts` | SMS sign-in fails. **Both this and `VONAGE_API_SECRET` are required** — Vonage authenticates with HTTP Basic (`api_key:api_secret`), so either alone leaves the method unavailable |
+| `VONAGE_API_SECRET` | `auth/phoneOtp.ts` | The second half of the pair above. Same dashboard page as the key, same row |
 | `VONAGE_SMS_SENDER` | `auth/phoneOtp.ts` | Falls back to `SahakarSeva`; **must be a sender id registered with Vonage** |
 
 Sign-in methods degrade honestly rather than erroring opaquely: every screen
