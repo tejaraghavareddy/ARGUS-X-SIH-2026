@@ -167,6 +167,98 @@ function sendgridDetail(body: string): string {
   return body;
 }
 
+/**
+ * Send one sign-in code to one address through SendGrid.
+ *
+ * ## Why this is not just the provider callback
+ *
+ * `Email()` below is Convex Auth's provider shape, and it is one of two ways
+ * this project sends a code. The other is Better Auth's `emailOTP` plugin,
+ * whose `sendVerificationOTP` receives `{ email, otp, type }` — different
+ * names, no Auth.js request object — and knows nothing about `Email()`.
+ *
+ * Given the same vendor, key, payload shape, failure vocabulary and masking,
+ * the second path is four lines of glue if the transport is a plain function.
+ * Left as a closure inside the provider, it would be a second copy of ~90
+ * lines that silently drifts: a fixed 401 message in one file and a stale one
+ * in the other. So the transport is a named export and the provider is a
+ * caller of it.
+ *
+ * Throws on refusal (never returns a "maybe sent"), because both callers
+ * surface the message to a developer who needs to know which key to fix.
+ */
+export async function sendSigninEmail({
+  email,
+  token,
+}: {
+  email: string;
+  token: string;
+}): Promise<void> {
+  const apiKey = process.env.SENDGRID_API_KEY;
+  if (!apiKey) {
+    // Fail loudly rather than silently dropping sign-in codes: a missing key
+    // is a configuration error, and the thrown error surfaces in the server
+    // log instead of looking like a delivery failure to the customer.
+    throw new Error(
+      "SENDGRID_API_KEY is not set — add it in the project's Keys/API keys tab.",
+    );
+  }
+
+  // Plain fetch rather than axios: this is one POST to a JSON endpoint, and
+  // fetch needs no dependency in the function bundle.
+  let response: Response;
+  try {
+    response = await fetch(SENDGRID_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      // SendGrid's v3 shape: `personalizations` carries the recipients, and
+      // both a text and an HTML part live in `content`. Its flat `to`/`text`
+      // fields are Resend's, not its own, and are silently ignored.
+      body: JSON.stringify({
+        personalizations: [{ to: [{ email }] }],
+        from: fromAddress(),
+        subject: `${token} is your Sahakar Seva sign-in code`,
+        content: [
+          {
+            type: "text/plain",
+            value: `${token} is your Sahakar Seva sign-in code. It expires in 15 minutes. Do not share it with anyone.`,
+          },
+          {
+            type: "text/html",
+            value:
+              `<html><body style="font-family:system-ui,-apple-system,sans-serif;max-width:420px">` +
+              `<p style="font-size:15px;color:#0f172a">Your Sahakar Seva sign-in code is</p>` +
+              `<p style="font-size:32px;font-weight:800;letter-spacing:6px;color:#047857;margin:16px 0">${token}</p>` +
+              `<p style="font-size:13px;color:#64748b">It expires in 15 minutes. Do not share it with anyone.</p>` +
+              `</body></html>`,
+          },
+        ],
+      }),
+    });
+  } catch (error) {
+    throw new Error(
+      `Email delivery failed for ${maskEmail(email)}: ${String(error)}`,
+    );
+  }
+
+  // SendGrid answers 202 for an accepted send, and non-2xx with an `errors`
+  // array for anything it refused — an unverified from address being the
+  // usual one. Both are surfaced, because "the code did not arrive" is
+  // otherwise indistinguishable from "the address is wrong".
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(
+      describeSendgridFailure(response.status, sendgridDetail(detail), email),
+    );
+  }
+}
+
+/** Six digits, matching the code length the sign-in screens validate. */
+export const SIGNIN_CODE_LENGTH = 6;
+
 const base = Email({
   async generateVerificationToken() {
     const random: RandomReader = {
@@ -175,70 +267,11 @@ const base = Email({
       },
     };
     const alphabet = "0123456789";
-    return generateRandomString(random, alphabet, 6);
+    return generateRandomString(random, alphabet, SIGNIN_CODE_LENGTH);
   },
 
-  async sendVerificationRequest({ identifier: email, token }) {
-    const apiKey = process.env.SENDGRID_API_KEY;
-    if (!apiKey) {
-      // Fail loudly rather than silently dropping sign-in codes: a missing key
-      // is a configuration error, and the thrown error surfaces in the server
-      // log instead of looking like a delivery failure to the customer.
-      throw new Error(
-        "SENDGRID_API_KEY is not set — add it in the project's Keys/API keys tab.",
-      );
-    }
-
-    // Plain fetch rather than axios: this is one POST to a JSON endpoint, and
-    // fetch needs no dependency in the function bundle.
-    let response: Response;
-    try {
-      response = await fetch(SENDGRID_URL, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        // SendGrid's v3 shape: `personalizations` carries the recipients, and
-        // both a text and an HTML part live in `content`. Its flat `to`/`text`
-        // fields are Resend's, not its own, and are silently ignored.
-        body: JSON.stringify({
-          personalizations: [{ to: [{ email }] }],
-          from: fromAddress(),
-          subject: `${token} is your Sahakar Seva sign-in code`,
-          content: [
-            {
-              type: "text/plain",
-              value: `${token} is your Sahakar Seva sign-in code. It expires in 15 minutes. Do not share it with anyone.`,
-            },
-            {
-              type: "text/html",
-              value:
-                `<html><body style="font-family:system-ui,-apple-system,sans-serif;max-width:420px">` +
-                `<p style="font-size:15px;color:#0f172a">Your Sahakar Seva sign-in code is</p>` +
-                `<p style="font-size:32px;font-weight:800;letter-spacing:6px;color:#047857;margin:16px 0">${token}</p>` +
-                `<p style="font-size:13px;color:#64748b">It expires in 15 minutes. Do not share it with anyone.</p>` +
-                `</body></html>`,
-            },
-          ],
-        }),
-      });
-    } catch (error) {
-      throw new Error(
-        `Email delivery failed for ${maskEmail(email)}: ${String(error)}`,
-      );
-    }
-
-    // SendGrid answers 202 for an accepted send, and non-2xx with an `errors`
-    // array for anything it refused — an unverified from address being the
-    // usual one. Both are surfaced, because "the code did not arrive" is
-    // otherwise indistinguishable from "the address is wrong".
-    if (!response.ok) {
-      const detail = await response.text().catch(() => "");
-      throw new Error(
-        describeSendgridFailure(response.status, sendgridDetail(detail), email),
-      );
-    }
+  async sendVerificationRequest({ identifier, token }) {
+    await sendSigninEmail({ email: identifier, token });
   },
 });
 
