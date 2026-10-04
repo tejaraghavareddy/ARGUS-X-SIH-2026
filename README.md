@@ -124,8 +124,7 @@ enforced in the data model and the server, not in the copy:
 | Maps | Leaflet / react-leaflet |
 | Charts | Recharts |
 | Backend & database | Convex (reactive queries, mutations, actions) |
-| Auth | Convex Auth — email OTP, SMS OTP, anonymous, two demo providers (live) |
-| Auth (in progress) | Better Auth via `@convex-dev/better-auth` — component, instance, routes and client wired; not yet the identity layer |
+| Auth | Convex Auth — email OTP, SMS OTP, anonymous, two demo providers |
 | Payments | Direct UPI (worker's own VPA) with UTR confirmation |
 | AI | Google Gemini (`@google/genai`) |
 | Weather | Open-Meteo (keyless) |
@@ -169,14 +168,13 @@ in the default runtime.
 src/
   convex/                 backend: schema, queries, mutations, actions
     auth/                 Convex Auth providers (email OTP, phone OTP, demo)
-    betterAuth/           Better Auth instance, emailOTP plugin, its own auth config
     _generated/           codegen output — never hand-edited
   components/             shared UI, route guards, maps
     map/                  Leaflet radar, GIS map, location picker
     ui/                   shadcn/ui primitives
   lib/                    pure logic: geo, trades, slots, i18n, voice intents
   pages/                  one file per route
-  test/                   test harness + 30 test files
+  test/                   test harness + 29 test files
 ```
 
 Tests live in `src/test/` and colocate as `*.test.ts` next to pure library
@@ -267,25 +265,6 @@ no gateway account and no API key on this rail.
 `JWKS`, `JWT_PRIVATE_KEY`, `SITE_URL`, `CONVEX_SITE_URL`, `VLY_APP_NAME`,
 `VLY_CONVEX_AUTH_ISSUER`, `VLY_INTEGRATION_*`, `VITE_CONVEX_URL`.
 
-### Required for the Better Auth migration
-
-Better Auth is wired end to end but **no sign-in screen uses it yet** — Convex
-Auth is still the identity layer, and 19 foreign keys in `schema.ts` point at
-its `users` table. These variables are for the cutover, not for the app as it
-ships.
-
-| Variable | Used by | If missing |
-| --- | --- | --- |
-| `BETTER_AUTH_SECRET` | `betterAuth/auth.ts` | 32+ chars, not Better Auth's published default. **Without it Better Auth's own guard does not fire on Convex** — it only throws when `NODE_ENV === "production"`, which this runtime never sets. It would silently sign every session with the literal `"better-auth-secret-12345678901234567890"`, which is published in better-auth's source. `betterAuthSecretProblem()` rejects that explicitly, and the route handler is registered lazily so the failure stays confined to `/api/auth/*` |
-| `VITE_CONVEX_SITE_URL` | `lib/auth-client.ts` | Falls back to deriving `.convex.site` from `VITE_CONVEX_URL`, so this is optional |
-
-`SENDGRID_API_KEY` and `SENDGRID_FROM_EMAIL` serve **both** identity systems —
-`sendSigninEmail()` in `auth/emailOtp.ts` is the single SendGrid transport, and
-Better Auth's `emailOTP` plugin is a caller of it rather than a second copy.
-That matters because Better Auth's `emailOTP` ships with an **empty**
-`sendVerificationOTP`: unwired, it validates a code, reports success, and
-delivers nothing.
-
 ### Not required
 
 - **Gemini** — the forecast falls back to a documented heuristic.
@@ -325,7 +304,7 @@ anything under `src/convex/`, the Convex push must succeed first.
 
 ## Testing
 
-**580 tests across 33 files**, all passing.
+**564 tests across 32 files**, all passing.
 
 | Area | Files |
 | --- | --- |
@@ -336,7 +315,6 @@ anything under `src/convex/`, the Convex push must succeed first.
 | Governance | `admin.test.ts`, `societies.test.ts`, `workerAdmin.test.ts`, `disputes.test.ts` |
 | Workers | `artisans.test.ts`, `workSamples.test.ts`, `customServices.test.ts` |
 | Sign-in | `workerAuth.test.ts`, `demoAdmin.test.ts`, `i18n.test.ts` |
-| Better Auth wiring | `betterAuth.test.ts` |
 | Geospatial | `geo.test.ts`, `useLocation.test.ts` |
 | Forecasting | `forecastAi.test.ts`, `weather.test.ts`, `forecasts.test.ts` |
 | Rate limiting | `rateLimit.test.ts` |

@@ -170,22 +170,22 @@ function sendgridDetail(body: string): string {
 /**
  * Send one sign-in code to one address through SendGrid.
  *
- * ## Why this is not just the provider callback
+ * ## Why this is a named function and not just the provider callback
  *
- * `Email()` below is Convex Auth's provider shape, and it is one of two ways
- * this project sends a code. The other is Better Auth's `emailOTP` plugin,
- * whose `sendVerificationOTP` receives `{ email, otp, type }` — different
- * names, no Auth.js request object — and knows nothing about `Email()`.
+ * `Email()` below is Convex Auth's provider shape, and `sendVerificationRequest`
+ * is its callback. Pulling the body out here means the transport — vendor, key,
+ * payload shape, failure vocabulary, address masking — is one named thing with
+ * one name to test against, rather than a closure reachable only by faking an
+ * Auth.js request object.
  *
- * Given the same vendor, key, payload shape, failure vocabulary and masking,
- * the second path is four lines of glue if the transport is a plain function.
- * Left as a closure inside the provider, it would be a second copy of ~90
- * lines that silently drifts: a fixed 401 message in one file and a stale one
- * in the other. So the transport is a named export and the provider is a
- * caller of it.
+ * That matters because every detail in here is silent when wrong. A payload in
+ * the wrong vendor's shape is not rejected at the boundary — it is dropped, and
+ * the user simply never receives a code. So the send is a value that can be
+ * called, asserted on, and reasoned about directly.
  *
- * Throws on refusal (never returns a "maybe sent"), because both callers
- * surface the message to a developer who needs to know which key to fix.
+ * Throws on refusal and never returns a "maybe sent": the caller surfaces the
+ * message to a developer who needs to know which key to fix, and "the code did
+ * not arrive" is otherwise indistinguishable from "the address is wrong".
  */
 export async function sendSigninEmail({
   email,

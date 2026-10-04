@@ -22,22 +22,10 @@ lives server-side.
 | can import | anything in `src/convex/**` except node-only modules | `convex/server` + npm packages |
 | used for | all business logic, auth routes, `http.ts` | outbound SMS/email/Gemini calls |
 
-`src/convex/http.ts` mounts two route sets: Convex Auth's own callbacks
-(`auth.addHttpRoutes(http)`), which are still the only thing any sign-in screen
-calls, and Better Auth's `/api/auth/*` handler, registered lazily. Before the
-gateway removal it also mounted the payment webhook route; that route is gone.
-
-The Better Auth registration is `registerRoutesLazy`, not `registerRoutes`. The
-eager variant constructs the auth instance at module load; with the lazy one, a
-missing `BETTER_AUTH_SECRET` fails only `/api/auth/*` and leaves Convex Auth
-alone.
-
-**Do not trust Better Auth's own secret guard here.** It throws only when
-`NODE_ENV === "production"`, and the Convex runtime does not set `NODE_ENV` to
-that. With the variable unset, Better Auth constructs, serves a JWKS, and signs
-sessions with the published default constant — no error anywhere. That was
-observed live on this deployment before `betterAuthSecretProblem()` was added.
-The check is now explicit; do not "simplify" it away.
+`src/convex/http.ts` is now the smallest it has ever been — an `httpRouter()`
+plus `auth.addHttpRoutes(http)` and nothing else. Before the gateway removal it
+also mounted the payment webhook route; that route is gone, so **the only
+inbound HTTP surface is Convex Auth's own callbacks.**
 
 **Storage.** `src/convex/schema.ts` — 14 app tables plus the auth tables.
 `bookings` is the centre of gravity and carries its own money columns (`base`,
@@ -154,9 +142,9 @@ point, nothing to do with payments) and was deleted along with its regional
 imports.
 
 **Docs are coupled to the test count.** `README.md` and `SIH_SUBMISSION.md` both
-state **580 tests across 33 files**. That's a measured number, not a claim:
-`betterAuth.test.ts` (16) accounts for the most recent delta. If you add or
-drop a test, both docs go stale.
+state **564 tests across 32 files**. That's a measured number, not a claim:
+removing `payments.test.ts` (12) and `cryptoHex.test.ts` (8) from 478 is the whole
+delta. If you add or drop a test, both docs go stale.
 
 ---
 
@@ -197,7 +185,7 @@ it's the line a reviewer will push on.
 ```bash
 bunx convex dev --once    # required after editing anything in src/convex/
 bunx tsc -b --noEmit      # frontend typecheck
-bun run test              # 580 tests / 33 files
+bun run test              # 564 tests / 32 files
 bun run lint
 ```
 

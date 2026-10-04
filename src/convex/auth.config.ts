@@ -1,4 +1,3 @@
-import { getAuthConfigProvider } from "@convex-dev/better-auth/auth-config";
 import type { AuthConfig } from "convex/server";
 
 // Freebuff-signed federated tokens (see freebuff web's
@@ -30,18 +29,5 @@ export default {
       applicationID: "vly-convex",
       algorithm: "RS256",
     },
-
-    // Better Auth's own provider (see ./betterAuth/authConfig.ts). Added
-    // alongside the two above rather than replacing them, because both
-    // identity systems are signed-in-capable at once during the migration and
-    // `ctx.auth` has to accept either token. Three providers is not a
-    // conflict: Convex matches on the token's issuer, and these three have
-    // three different ones.
-    //
-    // Do NOT hand this file to Better Auth's `convex()` plugin — it filters
-    // providers on `applicationID === "convex"` and throws if it finds more
-    // than one, which the entry above guarantees. The plugin gets
-    // ./betterAuth/authConfig.ts instead, which holds only this provider.
-    getAuthConfigProvider(),
   ],
 } satisfies AuthConfig;
